@@ -1,5 +1,5 @@
 ![](documentation/logo.png)
-# µDIC [![CircleCI](https://circleci.com/gh/PolymerGuy/myDIC/tree/dev.svg?style=shield&circle-token=a243539092cfaffdffd7a59765c8b25827e55ab0)](https://circleci.com/gh/PolymerGuy/myDIC/tree/dev)
+# µDIC [![CircleCI](https://circleci.com/gh/PolymerGuy/muDIC.svg?style=svg)](https://circleci.com/gh/PolymerGuy/muDIC)
 
 
 
