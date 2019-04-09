@@ -21,8 +21,7 @@ For making speckle images, the toolkit comes with several algorithms and we will
         image_shape, 
         dot_size=4, 
         density=0.32, 
-        smoothness=2.0, 
-        layers=2)
+        smoothness=2.0)
 
 If you want further explaination on the arguments, you can look in the theory section or in the API docs.
 
@@ -88,7 +87,7 @@ Virtual experiment
 These components can now be composed in a script, or we can use the virtual-experiment fascility
 to make an image stack directly::
 
-    image_stack = vlab.VirtualExperiment(speckle_image=speckle_image, 
+    image_stack = vlab.SyntheticImageGenerator(speckle_image=speckle_image,
         image_deformer=image_deformer,
         downsampler=downsampler, 
         noise_injector=noise_injector,
