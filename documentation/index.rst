@@ -123,7 +123,7 @@ This project is described in the following paper and citation is highly apprecia
 ..    :maxdepth: 2
 ..    :glob:
 ..    :caption: API
-.. 
+..
 ..    API/io
 ..    API/correlator
 ..    API/vlab
