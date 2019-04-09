@@ -109,24 +109,24 @@ This project is described in the following paper and citation is highly apprecia
    
 .. _feature-docs:
 
-.. toctree::
-   :maxdepth: 2
-   :glob:
-   :caption: Theory
+.. .. toctree::
+..    :maxdepth: 2
+..    :glob:
+..    :caption: Theory
+..
+..    theory/Virtual_lab
+..    theory/mesher
+..    theory/corelation
+..    theory/postprocessing
 
-   theory/Virtual_lab
-   theory/mesher
-   theory/corelation
-   theory/postprocessing
-
-.. toctree::
-   :maxdepth: 2
-   :glob:
-   :caption: API
-
-   API/io
-   API/correlator
-   API/vlab
+.. .. toctree::
+..    :maxdepth: 2
+..    :glob:
+..    :caption: API
+.. 
+..    API/io
+..    API/correlator
+..    API/vlab
 
 
 Indices and tables
