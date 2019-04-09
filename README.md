@@ -97,7 +97,7 @@ $ nosetests
 ```
 
 ## Documentation
-Documentation is hosted by: LINK TO READ THE DOCS
+Documentation is hosted by: [https://mudic.readthedocs.io/en/latest/]
 
 
 ## Our motivation
