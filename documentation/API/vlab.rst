@@ -4,33 +4,33 @@ Virtual lab
 VirtualExperiment
 -----------------
    
-.. autoclass:: myDIC.vlab.virtualExperiment.VirtualExperiment
+.. autoclass:: muDIC.vlab.virtualExperiment.VirtualExperiment
    :members:
 
 
 Downsampler
 -----------
 
-.. automodule:: myDIC.vlab.downsampler
+.. automodule:: muDIC.vlab.downsampler
    :members:
 
-.. autoclass:: myDIC.vlab.downsampler.Downsampler
+.. autoclass:: muDIC.vlab.downsampler.Downsampler
    :members:
 
-.. autofunction:: myDIC.vlab.downsampler.coord_subpos
+.. autofunction:: muDIC.vlab.downsampler.coord_subpos
 
 ImageDeformer
 -------------
 
-.. autofunction:: myDIC.vlab.image_deformer.imageDeformer_from_defGrad
-.. autofunction:: myDIC.vlab.image_deformer.imageDeformer_from_uFunc
+.. autofunction:: muDIC.vlab.image_deformer.imageDeformer_from_defGrad
+.. autofunction:: muDIC.vlab.image_deformer.imageDeformer_from_uFunc
 
-.. automodule:: myDIC.vlab.image_deformer
+.. automodule:: muDIC.vlab.image_deformer
    :members:
 
-.. autoclass:: myDIC.vlab.image_deformer.ImageDeformer
+.. autoclass:: muDIC.vlab.image_deformer.ImageDeformer
    :members:
 
 
-.. autofunction:: myDIC.vlab.image_deformer.deformation_gradient
-.. autofunction:: myDIC.vlab.image_deformer.num_diff
+.. autofunction:: muDIC.vlab.image_deformer.deformation_gradient
+.. autofunction:: muDIC.vlab.image_deformer.num_diff
