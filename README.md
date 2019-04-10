@@ -7,7 +7,7 @@
 This project aims at providing a “batteries included” toolkit for digital image correlation in Python. 
 The functionality you need to perform digital image correlation on experimental data as well as for doing virtual experiments are included.
 
-![alt text](documentation/examples/figures/GIF.gif)
+![alt text](documentation/examples/figures/GIF.gif)![alt text](documentation/examples/figures/GIF_mesh.gif)
 
 Typical usage is demonstrated in the examples located in the /Examples folder.
 
