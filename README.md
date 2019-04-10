@@ -118,7 +118,6 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 ## Citing this project
 This project is described in the following paper and citation is highly appreciated
 
-[THE AWESOME PAPER TO BE PUBLISHED]
 
 
 
