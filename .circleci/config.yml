@@ -49,8 +49,8 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            nosetests --with-coverage
-            codecov -t
+            nosetests muDIC --with-coverage
+            codecov -t $CODECOV_TOKEN
 
       - store_artifacts:
           path: test-reports
