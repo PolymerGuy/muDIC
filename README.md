@@ -1,5 +1,9 @@
 ![](documentation/logo.png)
-# µDIC [![CircleCI](https://circleci.com/gh/PolymerGuy/muDIC.svg?style=svg)](https://circleci.com/gh/PolymerGuy/muDIC)
+# µDIC [![CircleCI](https://circleci.com/gh/PolymerGuy/muDIC.svg?style=svg)](https://circleci.com/gh/PolymerGuy/muDIC) 
+
+[![codecov](https://codecov.io/gh/PolymerGuy/muDIC/branch/master/graph/badge.svg)](https://codecov.io/gh/PolymerGuy/muDIC)
+
+
 
 
 
