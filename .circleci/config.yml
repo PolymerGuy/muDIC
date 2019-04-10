@@ -50,7 +50,7 @@ jobs:
           command: |
             . venv/bin/activate
             nosetests --with-coverage
-            codecov
+            codecov -t
 
       - store_artifacts:
           path: test-reports
