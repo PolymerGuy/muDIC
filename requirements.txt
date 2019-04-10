@@ -8,3 +8,5 @@ nose
 scikit-image
 codecov
 coverage
+pytest
+pytest-cov
