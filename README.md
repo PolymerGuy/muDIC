@@ -1,17 +1,15 @@
 ![](documentation/logo.png)
-# µDIC 
+# µDIC: A Python toolkit for Digital Image Correlation (DIC)
 [![CircleCI](https://circleci.com/gh/PolymerGuy/muDIC.svg?style=svg)](https://circleci.com/gh/PolymerGuy/muDIC) [![codecov](https://codecov.io/gh/PolymerGuy/muDIC/branch/master/graph/badge.svg)](https://codecov.io/gh/PolymerGuy/muDIC) [![Documentation Status](https://readthedocs.org/projects/mudic/badge/?version=latest)](https://mudic.readthedocs.io/en/latest/?badge=latest)[![PyPI version](https://badge.fury.io/py/muDIC.svg)](https://badge.fury.io/py/muDIC)
 
 
-
-
-
-A python toolkit for Digital Image Correlation (DIC)
 ## Overview
-This package provides a "batteries included" toolkit for 2D digital image correlation. The intended use in in the field of material research, for non-contact strain measurements.
-The implementation is based on B-splines, providing a very flexible framework where various degrees of continuity can be enforced etc.
+This project aims at providing a “batteries included” toolkit for digital image correlation in Python. 
+The functionality you need to perform digital image correlation on experimental data as well as for doing virtual experiments are included.
 
-Typical usage is demonstrated in the provided examples
+![alt text](documentation/examples/figures/GIF.gif)![alt text](documentation/examples/figures/GIF_mesh.gif)
+
+Typical usage is demonstrated in the examples located in the /Examples folder.
 
 
 This toolkit includes the following:
