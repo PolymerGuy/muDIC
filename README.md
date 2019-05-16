@@ -48,7 +48,8 @@ Make sure you have Python 3 installed with pip and virtualenv
 Make new folder and use a terminal to make a virtual environment:
 ```
 $ python -m virtualenv env
-$ source env/bin/activate
+$ source env/bin/activate #On Linux and Mac OS
+$ env\Scripts\activate.bat #On Windows
 ```
 We can now install µDIC inside this environment using pip
 ```
@@ -56,7 +57,7 @@ $ pip install muDIC
 ```
 Now, lets run all the tests included by using nosetests
 ```
-$ nosetests muDIC
+$ nosetests muDIC   #Note capital cases
 ```
 
 
@@ -73,7 +74,8 @@ We recommend that you always use virtual environments, either by virtualenv or b
 Virtual env:
 ```
 $ python -m virtualenv env
-$ source /myproject/bin/activate
+$ source /env/bin/activate #On Linux and Mac OS
+$ env\Scripts\activate.bat #On Windows
 $ pip install -r requirements.txt
 ```
 
@@ -88,7 +90,7 @@ The tests should always be launched to check your installation.
 
 If you installed by a package manager:
 ```
-$ nosetests muDIC
+$ nosetests muDIC #Note capital cases
 ```
 
 If you cloned the repo:
