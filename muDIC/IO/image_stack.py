@@ -179,7 +179,7 @@ def find_file_names(path, type=".png"):
     List of filenames
 
      """
-    return sorted([path + file for file in os.listdir(path) if file.endswith(type)])
+    return sorted([os.path.join(path, file) for file in os.listdir(path) if file.endswith(type)])
 
 
 def image_stack_from_folder(path_to_folder, file_type='.png'):
@@ -216,6 +216,7 @@ def image_stack_from_folder(path_to_folder, file_type='.png'):
         raise TypeError('Filetype has to be: %s' % str.join(*supported_filetypes))
 
     file_names_all = find_file_names(path_to_folder, file_type)
+
     logger.info("Found %i images in folder" % len(file_names_all))
 
     return ImageStack(ImageReader(file_names_all))
