@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="muDIC",
-    version="0.0.8",
+    version="0.1.0",
     author="PolymerGuy",
     author_email="sindre.n.olufsen@ntnu.no",
     description="A digital image correlation toolkit",
@@ -15,7 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         'numba',
-        'scipy >= 1.2.1',
+        'scipy == 1.2.1',
         'matplotlib',
         'numpy',
         'Pillow',
