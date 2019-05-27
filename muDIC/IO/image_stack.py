@@ -213,7 +213,7 @@ def image_stack_from_folder(path_to_folder, file_type='.png'):
 
     if type(file_type) is not str or file_type not in supported_filetypes:
         # TODO: include more valid file types
-        raise TypeError('Filetype has to be: %s' % str.join(*supported_filetypes))
+        raise TypeError('Filetype has to be: %s' % " ".join(supported_filetypes))
 
     file_names_all = find_file_names(path_to_folder, file_type)
 
