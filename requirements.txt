@@ -1,8 +1,12 @@
 numba
-scipy >= 1.2.1
+scipy == 1.2.1
 matplotlib
 numpy
 Pillow
 dill
 nose
 scikit-image
+codecov
+coverage
+pytest
+pytest-cov

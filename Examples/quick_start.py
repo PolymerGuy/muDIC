@@ -5,7 +5,8 @@ import logging
 logging.basicConfig(format='%(name)s:%(levelname)s:%(message)s', level=logging.INFO)
 
 # Path to folder containing images
-path = r'./example_data/'
+path = r'./example_data/' # Use this formatting on Linux and Mac OS
+#path = r'c:\path\to\example_data\\'  # Use this formatting on Windows
 
 # Generate image instance containing all images found in the folder
 images = dic.IO.image_stack_from_folder(path, file_type='.tif')
@@ -36,5 +37,7 @@ fields = dic.post.viz.Fields(dic_results)
 
 # Show a field
 viz = dic.Visualizer(fields,images=images)
-viz.show(field="true strain", component = (1,1), frame = 39)
+
+# Uncomment the line below to see the results
+# viz.show(field="true strain", component = (1,1), frame = 39)
 

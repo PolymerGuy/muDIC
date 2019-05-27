@@ -1,14 +1,15 @@
 ![](documentation/logo.png)
-# µDIC [![CircleCI](https://circleci.com/gh/PolymerGuy/muDIC.svg?style=svg)](https://circleci.com/gh/PolymerGuy/muDIC)
+# µDIC: A Python toolkit for Digital Image Correlation (DIC)
+[![CircleCI](https://circleci.com/gh/PolymerGuy/muDIC.svg?style=svg)](https://circleci.com/gh/PolymerGuy/muDIC) [![codecov](https://codecov.io/gh/PolymerGuy/muDIC/branch/master/graph/badge.svg)](https://codecov.io/gh/PolymerGuy/muDIC) [![Documentation Status](https://readthedocs.org/projects/mudic/badge/?version=latest)](https://mudic.readthedocs.io/en/latest/?badge=latest)[![PyPI version](https://badge.fury.io/py/muDIC.svg)](https://badge.fury.io/py/muDIC)
 
 
-
-A python toolkit for Digital Image Correlation (DIC)
 ## Overview
-This package provides a "batteries included" toolkit for 2D digital image correlation. The intended use in in the field of material research, for non-contact strain measurements.
-The implementation is based on B-splines, providing a very flexible framework where various degrees of continuity can be enforced etc.
+This project aims at providing a “batteries included” toolkit for digital image correlation in Python. 
+The functionality you need to perform digital image correlation on experimental data as well as for doing virtual experiments are included.
 
-Typical usage is demonstrated in the provided examples
+![alt text](documentation/examples/figures/GIF.gif)![alt text](documentation/examples/figures/GIF_mesh.gif)
+
+Typical usage is demonstrated in the examples located in the /Examples folder.
 
 
 This toolkit includes the following:
@@ -47,7 +48,8 @@ Make sure you have Python 3 installed with pip and virtualenv
 Make new folder and use a terminal to make a virtual environment:
 ```
 $ python -m virtualenv env
-$ source env/bin/activate
+$ source env/bin/activate #On Linux and Mac OS
+$ env\Scripts\activate.bat #On Windows
 ```
 We can now install µDIC inside this environment using pip
 ```
@@ -72,7 +74,8 @@ We recommend that you always use virtual environments, either by virtualenv or b
 Virtual env:
 ```
 $ python -m virtualenv env
-$ source /myproject/bin/activate
+$ source /env/bin/activate #On Linux and Mac OS
+$ env\Scripts\activate.bat #On Windows
 $ pip install -r requirements.txt
 ```
 
@@ -87,7 +90,7 @@ The tests should always be launched to check your installation.
 
 If you installed by a package manager:
 ```
-$ nosetests muDIC
+$ nosetests muDIC #Note capital cases
 ```
 
 If you cloned the repo:
@@ -117,7 +120,6 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 ## Citing this project
 This project is described in the following paper and citation is highly appreciated
 
-[THE AWESOME PAPER TO BE PUBLISHED]
 
 
 
