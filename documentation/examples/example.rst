@@ -9,7 +9,7 @@ Assuming that you have all the pictures you need in a folder,
 we can  import them all into an image stack::
 
     path = r"/the/path/to/the/images/"
-    image_stack = dic.image_stack_from_folder(path,filetype=".png")
+    image_stack = dic.image_stack_from_folder(path,file_type=".tif")
 
 We are now ready to generate a mesh, and to do that, you first need to instantiate a mesher object::
 
@@ -37,18 +37,20 @@ To manipulate the mesh, you can use:
 *   W,X: add or remove element in the vertical direction
 *   arrow keys: move the mesh one pixel in the direction of the arrow
 
+A good initial guess on element size is in the order of 40x40 pixels in each direction.
+
 In order for us to run a DIC analysis, we have to prepare the inputs by generating a settings object::
 
-    inputs = dic.Inputs(image_stack,mesh)
+    inputs = dic.DICInput(mesh,image_stack)
 
 We are now ready for running a DIC-analysis. We now make a DIC-job object, and call the .run() method::
 
-    dic_job = dic.DIC_job(inputs)
+    dic_job = dic.DICAnalysis(inputs)
     results = dic_job.run()
 
 We can now calculate the fields such as deformation gradients and strains::
 
-    fields = dic.Fields(dic_results)
+    fields = dic.Fields(results)
 
 If you want to extract a field for use somewhere else, you can do this by calling the method
 with the same name as the field variable you want::
@@ -63,7 +65,7 @@ First, we need to instanciate it::
 If we provide the images argument, the fields will be overlayed on the images.
 Then, we can use the .show method to look at a field for a given frame::
 
-    viz.show(field="True strain", component = (1,1), frame = 100)
+    viz.show(field="True strain", component = (1,1), frame = 39)
 
 which will show the figure below:
 
