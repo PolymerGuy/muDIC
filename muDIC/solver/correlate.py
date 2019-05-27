@@ -310,7 +310,7 @@ class DICAnalysis(object):
             raise TypeError('Inputs has to be an instance of the DICInput class')
 
         if not isinstance(inputs_checked.images, (ImageStack)):
-            raise TypeError('Image stack is not an instance of Image_reader')
+            raise TypeError('Image stack is not an instance of ImageStack')
 
         if not isinstance(inputs_checked.mesh, Mesh):
             raise TypeError('Mesh should be an instance of Mesh')
