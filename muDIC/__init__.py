@@ -13,3 +13,9 @@ from . import utils
 from .IO import image_stack_from_list, image_stack_from_folder, ImageStack
 from .mesh import Mesher
 from .solver import *
+
+
+# Set the default logging level
+import logging
+logging.basicConfig(format='%(name)s:%(levelname)s:%(message)s', level=logging.INFO)
+
