@@ -36,15 +36,23 @@ jobs:
             - ./venv
           key: v1-dependencies-{{ checksum "requirements.txt" }}
 
+      # run examples!
+      - run:
+          name: run examples
+          command: |
+            . venv/bin/activate
+            nosetests -w ./Examples/ test_check_examples.py
+
       # run tests!
       - run:
           name: run tests
           command: |
             . venv/bin/activate
-            nosetests -w ./Examples/ test_check_examples.py
             pytest --pyargs muDIC --cov=./
             codecov -t $CODECOV_TOKEN
 
       - store_artifacts:
           path: test-reports
           destination: test-reports
+
+
