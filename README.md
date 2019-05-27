@@ -57,7 +57,7 @@ $ pip install muDIC
 ```
 Now, lets run all the tests included by using nosetests
 ```
-$ nosetests muDIC   #Note capital cases
+$ nosetests muDIC
 ```
 
 
