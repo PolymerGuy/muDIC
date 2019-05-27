@@ -37,5 +37,7 @@ fields = dic.post.viz.Fields(dic_results)
 
 # Show a field
 viz = dic.Visualizer(fields,images=images)
-viz.show(field="true strain", component = (1,1), frame = 39)
+
+# Uncomment the line below to see the results
+# viz.show(field="true strain", component = (1,1), frame = 39)
 
