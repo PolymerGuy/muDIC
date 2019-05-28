@@ -33,7 +33,7 @@ Virtual env::
 
 $ cd /path/to/your/project
 $ python -m virtualenv env
-$ source env/bin/activate #On Linux and Mac OS
+$ source ./env/bin/activate #On Linux and Mac OS
 $ env\Scripts\activate.bat #On Windows
 $ pip install muDIC
 
@@ -60,7 +60,7 @@ Installing:
     Virtual env::
     
     $ python -m virtualenv env
-    $ source env/bin/activate #On Linux and Mac OS
+    $ source ./env/bin/activate #On Linux and Mac OS
     $ env\Scripts\activate.bat #On Windows
     $ pip install -r requirements.txt
 
@@ -81,5 +81,5 @@ If you installed via a package manger::
 
 If you cloned the repo, you have to call nosetests from within the folder::
 
-    $ nosetests
+    $ nosetests muDIC
 
