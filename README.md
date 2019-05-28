@@ -74,14 +74,14 @@ We recommend that you always use virtual environments, either by virtualenv or b
 Virtual env:
 ```
 $ python -m virtualenv env
-$ source /env/bin/activate #On Linux and Mac OS
+$ source ./env/bin/activate #On Linux and Mac OS
 $ env\Scripts\activate.bat #On Windows
 $ pip install -r requirements.txt
 ```
 
 You can now run the tests by:
 ```
-$ nosetests
+$ nosetests muDIC
 ```
 
 ## Running the tests
