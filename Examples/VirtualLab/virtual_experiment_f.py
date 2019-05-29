@@ -15,6 +15,8 @@ one used to deform the images
 
 # Set the amount of info printed to terminal during analysis
 logging.basicConfig(format='%(name)s:%(levelname)s:%(message)s', level=logging.INFO)
+show_results = False
+
 
 # Define the image you want to analyse
 n_imgs = 2
@@ -45,7 +47,9 @@ image_stack = dic.ImageStack(image_generator)
 
 # Now, make a mesh. Make sure to use enough elements
 mesher = dic.Mesher(deg_n=3, deg_e=3)
-mesh = mesher.mesh(image_stack)
+#mesh = mesher.mesh(image_stack) # Use this if you want to use a GUI
+mesh = mesher.mesh(image_stack,Xc1=50,Xc2=450,Yc1=50,Yc2=450,n_ely=8,n_elx=8, GUI=False)
+
 
 # Prepare the analysis input and initiate the analysis
 input = dic.DICInput(mesh, image_stack)
@@ -59,28 +63,27 @@ fields = dic.Fields(results, seed=101)
 
 # We will now compare the results from the analysis to the deformation gradient which the image was deformed by
 
+if show_results:
+    plt.figure()
+    plt.imshow(F[0,0] - fields.F()[0, 0,0, :, :, 1], cmap=plt.cm.magma)
+    plt.xlabel("Element e-coordinate")
+    plt.ylabel("Element n-coordinate")
+    plt.colorbar()
+    plt.title("Difference in deformation gradient component 0,0 within the element")
 
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(111)
+    #line1 = ax1.plot(res_field[:, 50], label="correct")
+    line2 = ax1.plot(fields.F()[0, 0,0, :, 50, 1], label="DIC")
+    ax1.set_xlabel("element e-coordinate")
+    ax1.set_ylabel("Deformation gradient component 0,0 []")
 
-plt.figure()
-plt.imshow(F[0,0] - fields.F()[0, 0,0, :, :, 1], cmap=plt.cm.magma)
-plt.xlabel("Element e-coordinate")
-plt.ylabel("Element n-coordinate")
-plt.colorbar()
-plt.title("Difference in deformation gradient component 0,0 within the element")
+    ax2 = fig1.add_subplot(111, sharex=ax1, frameon=False)
+    line3 = ax2.plot(F[0,0] - fields.F()[0, 0,0, :, 50, 1], "r--", label="difference")
+    ax2.yaxis.tick_right()
+    ax2.yaxis.set_label_position("right")
+    ax2.set_ylabel("Deviation []")
+    plt.title("Deformation gradient component 0,0")
 
-fig1 = plt.figure()
-ax1 = fig1.add_subplot(111)
-#line1 = ax1.plot(res_field[:, 50], label="correct")
-line2 = ax1.plot(fields.F()[0, 0,0, :, 50, 1], label="DIC")
-ax1.set_xlabel("element e-coordinate")
-ax1.set_ylabel("Deformation gradient component 0,0 []")
-
-ax2 = fig1.add_subplot(111, sharex=ax1, frameon=False)
-line3 = ax2.plot(F[0,0] - fields.F()[0, 0,0, :, 50, 1], "r--", label="difference")
-ax2.yaxis.tick_right()
-ax2.yaxis.set_label_position("right")
-ax2.set_ylabel("Deviation []")
-plt.title("Deformation gradient component 0,0")
-
-fig1.legend()
-plt.show()
+    fig1.legend()
+    plt.show()
