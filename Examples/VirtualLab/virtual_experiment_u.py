@@ -15,6 +15,7 @@ one used to deform the images
 
 # Set the amount of info printed to terminal during analysis
 logging.basicConfig(format='%(name)s:%(levelname)s:%(message)s', level=logging.INFO)
+show_results = False
 
 # Define the image you want to analyse
 n_imgs = 2
@@ -45,7 +46,8 @@ image_stack = dic.ImageStack(image_generator)
 
 # Now, make a mesh. Make sure to use enough elements
 mesher = dic.Mesher(deg_n=3, deg_e=3)
-mesh = mesher.mesh(image_stack)
+#mesh = mesher.mesh(image_stack)    # Use this if you want to mesh with a GUI
+mesh = mesher.mesh(image_stack,Xc1=50,Xc2=450,Yc1=50,Yc2=450,n_ely=8,n_elx=8, GUI=False)
 
 # Prepare the analysis input and initiate the analysis
 input = dic.DICInput(mesh, image_stack)
@@ -72,34 +74,37 @@ n = fields.coords()[0, 0, :, :, 1]
 # Make sure to include the down-sampling factor, as it alters the displacement values "they are in pixel units"
 res_field = dic.utils.extract_points_from_image(u_x, np.array([e, n])) / downsample_factor
 
-# Now, lets just plot the results!
-plt.figure()
-plt.imshow(u_x, cmap=plt.cm.magma)
-plt.xlabel("Image X-coordinate")
-plt.ylabel("Image Y-coordinate")
-plt.colorbar()
-plt.title("The imposed displacement field component in the X-direction")
 
-plt.figure()
-plt.imshow(res_field - fields.disp()[0, 0, :, :, 1], cmap=plt.cm.magma)
-plt.xlabel("Element e-coordinate")
-plt.ylabel("Element n-coordinate")
-plt.colorbar()
-plt.title("Difference in displacement value within the element")
+if show_results:
 
-fig1 = plt.figure()
-ax1 = fig1.add_subplot(111)
-line1 = ax1.plot(res_field[:, 50], label="correct")
-line2 = ax1.plot(fields.disp()[0, 0, :, 50, 1], label="DIC")
-ax1.set_xlabel("element e-coordinate")
-ax1.set_ylabel("Displacement [pixels]")
+    # Now, lets just plot the results!
+    plt.figure()
+    plt.imshow(u_x, cmap=plt.cm.magma)
+    plt.xlabel("Image X-coordinate")
+    plt.ylabel("Image Y-coordinate")
+    plt.colorbar()
+    plt.title("The imposed displacement field component in the X-direction")
 
-ax2 = fig1.add_subplot(111, sharex=ax1, frameon=False)
-line3 = ax2.plot(res_field[:, 50] - fields.disp()[0, 0, :, 50, 1], "r--", label="difference")
-ax2.yaxis.tick_right()
-ax2.yaxis.set_label_position("right")
-ax2.set_ylabel("Deviation [pixels]")
-plt.title("Displacement field values along the center of the field")
+    plt.figure()
+    plt.imshow(res_field - fields.disp()[0, 0, :, :, 1], cmap=plt.cm.magma)
+    plt.xlabel("Element e-coordinate")
+    plt.ylabel("Element n-coordinate")
+    plt.colorbar()
+    plt.title("Difference in displacement value within the element")
 
-fig1.legend()
-plt.show()
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(111)
+    line1 = ax1.plot(res_field[:, 50], label="correct")
+    line2 = ax1.plot(fields.disp()[0, 0, :, 50, 1], label="DIC")
+    ax1.set_xlabel("element e-coordinate")
+    ax1.set_ylabel("Displacement [pixels]")
+
+    ax2 = fig1.add_subplot(111, sharex=ax1, frameon=False)
+    line3 = ax2.plot(res_field[:, 50] - fields.disp()[0, 0, :, 50, 1], "r--", label="difference")
+    ax2.yaxis.tick_right()
+    ax2.yaxis.set_label_position("right")
+    ax2.set_ylabel("Deviation [pixels]")
+    plt.title("Displacement field values along the center of the field")
+
+    fig1.legend()
+    plt.show()
