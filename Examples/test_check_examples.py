@@ -11,5 +11,18 @@ class TestExampleCases(TestCase):
         except Exception as e:
             self.fail(e)
 
+    def test_run_virtual_experiment_f_start(self):
+        try:
+            from .VirtualLab import virtual_experiment_f
+
+        except Exception as e:
+            self.fail(e)
+
+    def test_run_virtual_experiment_u_start(self):
+        try:
+            from .VirtualLab import virtual_experiment_u
+
+        except Exception as e:
+            self.fail(e)
 
 
