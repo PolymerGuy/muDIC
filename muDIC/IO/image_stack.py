@@ -5,7 +5,7 @@ from functools import partial
 
 import numpy as np
 from scipy import ndimage
-
+import imageio as io
 
 class ImageStack(object):
     def __init__(self, image_reader, filter=None):
@@ -130,11 +130,13 @@ class ImageReader(object):
         return len(self._image_paths_)
 
     def __call__(self, index, rotate=False):
+        img = io.imread(self._image_paths_[index]).astype(self.precision)
+        if np.ndim(img) >2:
+            img = np.average(img,axis=2)
         if not rotate:
-            return ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision)
+            return img
         else:
-            return ndimage.rotate(ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision),
-                                  rotate)
+            return ndimage.rotate(img, rotate)
 
 
 class ImageListWrapper(object):

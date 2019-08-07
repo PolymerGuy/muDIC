@@ -1,5 +1,6 @@
 numba
-scipy == 1.2.1
+scipy
+imageio
 matplotlib
 numpy
 Pillow
