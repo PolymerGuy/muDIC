@@ -167,7 +167,8 @@ class Mesher(object):
         fig.subplots_adjust(0.05, 0.05, 0.98, 0.98, 0.1)
         overview = plt.subplot2grid((12, 4), (0, 0), rowspan=11, colspan=4)
 
-        overview.imshow(self.image, cmap=plt.cm.gray)
+        n, m = self.image.shape
+        overview.imshow(self.image, cmap=plt.cm.gray,origin="lower", extent=(0, m, 0, n))
 
         data, = overview.plot([], [], 'ro')
         overview.autoscale(1, 'both', 1)
