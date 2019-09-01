@@ -130,7 +130,7 @@ class ImageReader(object):
         return len(self._image_paths_)
 
     def __call__(self, index, rotate=False):
-        img = io.imread(self._image_paths_[index]).astype(self.precision)
+        img = io.imread(self._image_paths_[index]).astype(self.precision)[::-1,:]
         if np.ndim(img) >2:
             img = np.average(img,axis=2)
         if not rotate:

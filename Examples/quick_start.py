@@ -19,7 +19,7 @@ mesh = mesher.mesh(images,Xc1=200,Xc2=1050,Yc1=200,Yc2=650,n_ely=8,n_elx=8, GUI=
 
 
 # Instantiate settings object and set some settings manually
-settings = dic.solver.correlate.DICInput(mesh, images)
+settings = dic.DICInput(mesh, images)
 settings.max_nr_im = 40
 settings.ref_update = [15]
 settings.maxit = 20
@@ -27,7 +27,7 @@ settings.maxit = 20
 settings.store_internals = False
 
 # Instantiate job object
-job = dic.solver.DICAnalysis(settings)
+job = dic.DICAnalysis(settings)
 
 # Running DIC analysis
 dic_results = job.run()
