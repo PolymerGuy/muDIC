@@ -130,14 +130,13 @@ class ImageReader(object):
         return len(self._image_paths_)
 
     def __call__(self, index, rotate=False):
-        img = io.imread(self._image_paths_[index]).astype(self.precision)
+        img = io.imread(self._image_paths_[index]).astype(self.precision)[::-1,:]
         if np.ndim(img) >2:
             img = np.average(img,axis=2)
         if not rotate:
-            return ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision)[::-1,:]
+            return img
         else:
-            return ndimage.rotate(ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision)[::-1,:],
-                                  rotate)
+            return ndimage.rotate(img, rotate)
 
 
 class ImageListWrapper(object):
