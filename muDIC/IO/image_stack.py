@@ -134,9 +134,10 @@ class ImageReader(object):
         if np.ndim(img) >2:
             img = np.average(img,axis=2)
         if not rotate:
-            return img
+            return ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision)[::-1,:]
         else:
-            return ndimage.rotate(img, rotate)
+            return ndimage.rotate(ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision)[::-1,:],
+                                  rotate)
 
 
 class ImageListWrapper(object):

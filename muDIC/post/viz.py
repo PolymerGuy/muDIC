@@ -238,7 +238,7 @@ class Fields(object):
         return self.__coords__[:, :, :, :, :] - self.__coords__[:, :, :, :, 0, np.newaxis]
 
     def residual(self, frame_id):
-        if self.__settings__.store_internals ==False:
+        if self.__settings__.store_internals == False:
             raise ValueError("The analysis has to be run with store_internals=True")
         ref_id = ind_closest_below(frame_id, [ref.image_id for ref in self.__res__.reference])
         ref = self.__res__.reference[ref_id]
@@ -314,6 +314,11 @@ class Visualizer(object):
             fvar = self.fields.disp()[0, component[0], :, :, frame]
             xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
+        elif keyword in ("coordinates", "coords", "coord"):
+            fvar = self.fields.coords()[0, component[0], :, :, frame]
+            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
+
+
         elif keyword == "greenstrain":
             fvar = self.fields.green_strain()[0, component[0], component[1], :, :, frame]
             xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
@@ -328,7 +333,10 @@ class Visualizer(object):
 
         if np.ndim(fvar) == 2:
             if self.images:
-                plt.imshow(self.images[frame], cmap=plt.cm.gray)
+                n,m = self.images[frame].shape
+                plt.imshow(self.images[frame], cmap=plt.cm.gray,origin="lower", extent=(0, m, 0, n))
+                #plt.imshow(self.images[frame], cmap=plt.cm.gray)
+
             plt.contourf(xs, ys, fvar, 50, alpha=0.8)
         else:
             plt.tricontourf(xs, ys, fvar, 50, alpha=0.8)
