@@ -131,9 +131,9 @@ class ImageReader(object):
 
     def __call__(self, index, rotate=False):
         if not rotate:
-            return ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision)
+            return ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision)[::-1,:]
         else:
-            return ndimage.rotate(ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision),
+            return ndimage.rotate(ndimage.imread(self._image_paths_[index], flatten=True).astype(self.precision)[::-1,:],
                                   rotate)
 
 
