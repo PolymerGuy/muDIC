@@ -86,7 +86,7 @@ def correlate_frames(node_pos, mesh, img, ref, settings):
         np.dot(node_pos, ref.Nref_stack, out=pixel_pos)
 
         # Find pixel values for current coordinates
-        Ic = nd.map_coordinates(image_filtered, pixel_pos, order=3, prefilter=False)
+        Ic = nd.map_coordinates(image_filtered, pixel_pos, order=settings.interpolation_order, prefilter=False)
 
         # Calculate position increment as (B^T B)^-1 * (B^T*dIk) "Least squares solution"
         dnod = np.dot(ref.K, ref.I0_stack - Ic)
