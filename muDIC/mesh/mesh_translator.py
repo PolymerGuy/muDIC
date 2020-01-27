@@ -1,3 +1,5 @@
+import  numpy as np
+from muDIC.solver.reference import find_covered_pixel_blocks
 def mesh_translator(org_mesh, target_mesh, dic_results):
    """
    Mesh translator maps the nodal position history obtained with org_mesh to the corresponding
@@ -10,16 +12,12 @@ def mesh_translator(org_mesh, target_mesh, dic_results):
    :param dic_results: dic_results instance
    :return: xnodesT,ynodeT corresponding to target_mesh
    """
-   if org_mesh.ele.shape[1] is not 1:
-       raise IOError("The origin mesh has to be a single element mesh!")
-   if org_mesh.ynodes.shape[0] is not dic_results.xnodesT.shape[0]:
-       raise IOError("The node-positions does not correspond to the original mesh")
-   # We need the element coordinates to the nodes
-   # We do this by using the original and target mesh in its un-deformed state
-   es, ns, _, _ = find_element_coordinates(org_mesh.xnodes[org_mesh.ele[:, 0]],
-                                           org_mesh.ynodes[org_mesh.ele[:, 0]], org_mesh.element_def,
-                                           Xx=target_mesh.xnodes.flatten(),
-                                           Yy=target_mesh.ynodes.flatten())
-   node_x = np.dot(target_mesh.element_def.Nn(es, ns), dic_results.xnodesT[org_mesh.ele[:, 0], :])
-   node_y = np.dot(target_mesh.element_def.Nn(es, ns), dic_results.ynodesT[org_mesh.ele[:, 0], :])
+
+   es, ns, xs, ys = find_covered_pixel_blocks(org_mesh.xnodes.flatten(),
+                                              org_mesh.ynodes.flatten(), org_mesh.element_def,xs=target_mesh.xnodes.flatten(),ys=target_mesh.ynodes.flatten(),keep_all=True)
+
+   es = np.round(np.array(es).flatten(),decimals=4)
+   ns = np.round(np.array(ns).flatten(),decimals=4)
+   node_x = np.dot(org_mesh.element_def.Nn(es, ns), dic_results.xnodesT[:, :])
+   node_y = np.dot(org_mesh.element_def.Nn(es, ns), dic_results.ynodesT[:, :])
    return node_x, node_y
