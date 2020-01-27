@@ -45,10 +45,10 @@ def correlate_img_to_ref(node_pos, mesh, img, ref, settings):
 
     image_frame, node_pos_img_coords = convert_to_img_frame(img, node_pos, mesh, element_borders, settings)
 
-    node_position_increment, Ic = correlate_frames(node_pos_img_coords, mesh, image_frame, ref, settings)
+    node_position_increment, Ic, conv = correlate_frames(node_pos_img_coords, mesh, image_frame, ref, settings)
 
     node_position_new = node_pos + node_position_increment
-    return node_position_new, Ic
+    return node_position_new, Ic, conv
 
 
 def correlate_frames(node_pos, mesh, img, ref, settings):
@@ -86,7 +86,7 @@ def correlate_frames(node_pos, mesh, img, ref, settings):
         np.dot(node_pos, ref.Nref_stack, out=pixel_pos)
 
         # Find pixel values for current coordinates
-        Ic = nd.map_coordinates(image_filtered, pixel_pos, order=3, prefilter=False)
+        Ic = nd.map_coordinates(image_filtered, pixel_pos, order=settings.interpolation_order, prefilter=False)
 
         # Calculate position increment as (B^T B)^-1 * (B^T*dIk) "Least squares solution"
         dnod = np.dot(ref.K, ref.I0_stack - Ic)
@@ -100,10 +100,11 @@ def correlate_frames(node_pos, mesh, img, ref, settings):
         # Check for convergence
         if np.max(np.abs(dnod)) < settings.tol:
             logger.info('Frame converged in %s iterations', it)
-            return np.array((dnod_x[:mesh.n_nodes], dnod_x[mesh.n_nodes:])), Ic
+            return np.array((dnod_x[:mesh.n_nodes], dnod_x[mesh.n_nodes:])), Ic, True
 
         # Reset array values
-    raise DidNotConverge('No convergence')
+    logger.info("Frame did not converge. Largest increment was %f pixels"%np.max(dnod))
+    return np.array((dnod_x[:mesh.n_nodes], dnod_x[mesh.n_nodes:])), Ic,False
 
 
 def store_stripped_copy(reference_generator, storage):
@@ -185,8 +186,11 @@ def correlate(inputs):
             logger.info('Processing frame nr: %i', image_id)
 
             if settings.node_hist:
-                node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, image_id]
-
+                if len(settings.node_hist)>=image_id:
+                    logger.info("Using initial conditions")
+                    node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, image_id]
+                else:
+                    pass
             if image_id in settings.ref_update:
                 logger.info('Updating reference at %i', image_id)
                 reference = gen_ref(node_coords, mesh, images[image_id - 1], settings, image_id=(image_id - 1))
@@ -194,22 +198,25 @@ def correlate(inputs):
             img = images[image_id]
 
             try:
-                node_coords, Ic = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
+                node_coords, Ic, conv = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
 
-            except DidNotConverge:
-                # If the reference is new, there is nothing more to do. Otherwise, update the reference and try again.
-                if reference.image_id == image_id - 1:
-                    logger.info('Correlation failed at frame %i', image_id)
-                    break
-                else:
-                    logger.info('Updating reference at %i', image_id)
-                    reference = gen_ref(node_coords, mesh, images[image_id - 1], settings, image_id - 1)
-                    node_coords, Ic = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
+                if not conv:
+                    # Handle the convergence issue
+                    if settings.noconvergence == "ignore":
+                        pass
+                    elif settings.noconvergence == "update":
+                        reference = gen_ref(node_coords, mesh, images[image_id - 1], settings, image_id - 1)
+                        node_coords, Ic,conv = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
+                        if not conv:
+                            break
+                    elif settings.noconvergence == "break":
+                        break
+
+
 
             except Exception as e:
-                logger.info('Correlation failed with error at frame %i', image_id)
                 logger.exception(e)
-                break
+                pass
 
             if settings.store_internals:
                 Ic_stacks.append(Ic)
@@ -333,13 +340,16 @@ class DICAnalysis(object):
         if type(inputs_checked.pad) is not int:
             raise TypeError('Padding width should be specified by an integer')
 
+        if not inputs_checked.noconvergence in ["ignore","update","break"]:
+            raise ValueError("The action on no convergence is either ignore, update or break")
+
         return inputs_checked
 
 
 class DICInput(object):
 
     def __init__(self, mesh, image_stack, ref_update_frames=[50, 150], maxit=40, max_nr_im=None, pad=10,
-                 store_internals=False, node_hist=None, precision="double", interpolation_order=3, block_size=1e7):
+                 store_internals=False, node_hist=None, precision="double", interpolation_order=3, block_size=1e7,noconvergence="ignore"):
 
         """
          DIC output container
@@ -363,11 +373,14 @@ class DICInput(object):
          store_internals : bool, optional
              If True, all references are stored and available in the DIC_output
          node_hist : ndarray, optional
-             An array containing the nodal positions for each image frame. This is used as initial conditions for the solver
+             An array containing the nodal positions for each image frame. This is used as initial conditions for the solver.
+             The array has the shape [xnodes,ynodes]
          precision : strings, optional
              The number precision to be used, either "single" or "double".
          interpolation_order : int, optional
              The polynomial order used for image interpolation during the DIC analysis.
+         noconvergence: string, optional
+             What to do when the solver does not converge, either "ignore", "update", "break"
          Returns
          -------
          DIC_input object
@@ -392,6 +405,7 @@ class DICInput(object):
         self.node_hist = node_hist
         self.interpolation_order = interpolation_order
         self.block_size = block_size
+        self.noconvergence = noconvergence
 
         if precision == "single":
             self.precision = np.float32

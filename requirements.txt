@@ -11,3 +11,4 @@ codecov
 coverage
 pytest
 pytest-cov
+natsort
