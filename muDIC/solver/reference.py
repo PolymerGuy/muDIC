@@ -201,7 +201,7 @@ def identify_pixels_within_frame(xnod, ynod, elm, over_sampling=1.1):
     return pixel_x, pixel_y, pixel_es, pixel_ns
 
 
-def find_covered_pixel_blocks(node_x, node_y, elm, max_iter=200, block_size=1e7, tol=1.e-6):
+def find_covered_pixel_blocks(node_x, node_y, elm,xs=None,ys=None,keep_all=False, max_iter=200, block_size=1e7, tol=1.e-6):
     """
     Find element coordinates to all pixels covered by the element.
 
@@ -256,7 +256,13 @@ def find_covered_pixel_blocks(node_x, node_y, elm, max_iter=200, block_size=1e7,
     found_y = []
 
     # These are just estimates
-    pix_Xs, pix_Ys, pix_es, pix_ns = identify_pixels_within_frame(node_x, node_y, elm)
+    if xs is not None and ys is not None:
+        pix_Xs, pix_Ys = xs,ys
+        pix_es = (pix_Xs-np.min(pix_Xs))/(np.max(pix_Xs)-np.min(pix_Xs))
+        pix_ns = (pix_Ys-np.min(pix_Ys))/(np.max(pix_Ys)-np.min(pix_Ys))
+    else:
+        pix_Xs, pix_Ys, pix_es, pix_ns = identify_pixels_within_frame(node_x, node_y, elm)
+
 
     # Split into blocks
     n_pix_in_block = block_size / np.float(len(node_x))
@@ -304,9 +310,12 @@ def find_covered_pixel_blocks(node_x, node_y, elm, max_iter=200, block_size=1e7,
             if not np.any(active_pixels):
                 logger.info('Pixel coordinates found in %i iterations', i)
 
-                epE_block, nyE_block, Xe_block, Ye_block = map(
-                    partial(np.delete, obj=find_inconsistent(e_coord, n_coord)),
-                    [e_coord, n_coord, X_coord, Y_coord])
+                if keep_all:
+                    epE_block, nyE_block, Xe_block, Ye_block = e_coord, n_coord, X_coord, Y_coord
+                else:
+                    epE_block, nyE_block, Xe_block, Ye_block = map(
+                        partial(np.delete, obj=find_inconsistent(e_coord, n_coord)),
+                        [e_coord, n_coord, X_coord, Y_coord])
 
                 found_e.append(epE_block)
                 founc_n.append(nyE_block)
@@ -432,3 +441,7 @@ def generate_reference(nodal_position, mesh, image, settings, image_id=None):
 
     return Reference(Nn, img_covered, K, None, num_pixels, pixel_es, pixel_ns,
                      image_id=image_id)
+
+
+
+
