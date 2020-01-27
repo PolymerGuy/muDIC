@@ -6,6 +6,7 @@ from functools import partial
 import numpy as np
 from scipy import ndimage
 import imageio as io
+from natsort import natsorted
 
 class ImageStack(object):
     def __init__(self, image_reader, filter=None):
@@ -181,7 +182,7 @@ def find_file_names(path, type=".png"):
     List of filenames
 
      """
-    return sorted([os.path.join(path, file) for file in os.listdir(path) if file.endswith(type)])
+    return natsorted([os.path.join(path, file) for file in os.listdir(path) if file.endswith(type)])
 
 
 def image_stack_from_folder(path_to_folder, file_type='.png'):
@@ -208,7 +209,7 @@ def image_stack_from_folder(path_to_folder, file_type='.png'):
     ImageStack
      """
     logger = logging.getLogger()
-    supported_filetypes = ['.png', '.bmp', '.tif']
+    supported_filetypes = ['.png', '.bmp', '.tif','.tiff']
 
     if type(path_to_folder) not in [str]:
         raise TypeError('Path has to be a string')

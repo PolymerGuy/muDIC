@@ -22,7 +22,8 @@ setuptools.setup(
         'dill',
         'nose',
         'scikit-image',
-        'muDIC'
+        'muDIC',
+        'natsort'
       ],
     classifiers=[
         "Programming Language :: Python :: 3",
