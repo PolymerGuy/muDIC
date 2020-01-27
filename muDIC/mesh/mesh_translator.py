@@ -5,7 +5,6 @@ def mesh_translator(org_mesh, target_mesh, dic_results):
    Mesh translator maps the nodal position history obtained with org_mesh to the corresponding
    nodal position history for target_mesh.
    The intended use of this function is to allow for a result set to be used as initial conditions for another analysis.
-   TODO: This implementation currently only supports org_mesh being a single spline element.
    TODO: Write tests
    :param org_mesh: mesh instance
    :param target_mesh: mesh instance
@@ -13,6 +12,7 @@ def mesh_translator(org_mesh, target_mesh, dic_results):
    :return: xnodesT,ynodeT corresponding to target_mesh
    """
 
+   raise Warning("The mesh translator is in Beta and may yield invalid results!")
    es, ns, xs, ys = find_covered_pixel_blocks(org_mesh.xnodes.flatten(),
                                               org_mesh.ynodes.flatten(), org_mesh.element_def,xs=target_mesh.xnodes.flatten(),ys=target_mesh.ynodes.flatten(),keep_all=True)
 
