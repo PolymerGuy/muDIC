@@ -23,8 +23,8 @@ def mesh_translator(org_mesh, target_mesh, dic_results):
                                                keep_all=True)
 
     # Some coordinates can be negative and very small.
-    es = np.abs(np.array(es).flatten())
-    ns = np.abs(np.array(ns).flatten())
+    es = np.round(np.array(es).flatten(),decimals=4)
+    ns = np.round(np.array(ns).flatten(),decimals=4)
 
     # Find the nodal positions of the target mesh based on the deformation of the original mesh
     node_x = np.dot(org_mesh.element_def.Nn(es, ns), dic_results.xnodesT[:, :])
