@@ -255,7 +255,7 @@ class BSplineSurface(FieldInterpolator):
         return int(mid)
 
     @staticmethod
-    @jit(nopython=True, parallel=True)
+    @jit(nopython=True, parallel=False)
     def _find_span_array_(degree, knotvector, num_ctrlpts, knots, tol=1e-5):
 
         results = np.zeros(len(knots), dtype=np.int64)
