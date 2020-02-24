@@ -367,7 +367,7 @@ class BSplineSurface(FieldInterpolator):
                     s2 = j
 
             # Multiply through by the the correct factors
-            r_fl = float(degree)
+            r_fl = np.float64(degree)
             for k in range(1, order + 1):
                 for j in range(0, degree + 1):
                     ders[k, j] *= r_fl

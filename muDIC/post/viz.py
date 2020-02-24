@@ -278,7 +278,7 @@ class Visualizer(object):
         self.images = images
         self.logger = logging.getLogger()
 
-    def show(self, field, component=(0, 0), frame=0):
+    def show(self, field, component=(0, 0), frame=0, **kwargs):
         """
         Show the field variable
 
@@ -337,9 +337,9 @@ class Visualizer(object):
                 plt.imshow(self.images[frame], cmap=plt.cm.gray,origin="lower", extent=(0, m, 0, n))
                 #plt.imshow(self.images[frame], cmap=plt.cm.gray)
 
-            plt.contourf(xs, ys, fvar, 50, alpha=0.8)
+            plt.contourf(xs, ys, fvar, 50, **kwargs)
         else:
-            plt.tricontourf(xs, ys, fvar, 50, alpha=0.8)
+            plt.tricontourf(xs, ys, fvar, 50, **kwargs)
 
         plt.colorbar()
         plt.show()
