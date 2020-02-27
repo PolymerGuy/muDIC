@@ -2,11 +2,12 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.ndimage import map_coordinates
 
 
 class Fields(object):
-
-    def __init__(self, dic_results, seed=21):
+    # TODO: Remove Q4 argument. This should be detected automaticaly
+    def __init__(self, dic_results, seed=21,Q4=True):
         """
         Fields calculates field variables from the DIC-results.
         The implementation is lazy, hence getter methods have to be used.
@@ -33,22 +34,62 @@ class Fields(object):
 
         self.logger = logging.getLogger()
 
+
+        # TODO: Remove hacking below
+        if Q4:
+            # Use only the centroid
+            seed=1
+
+
         # The type is implicitly checked by using the interface
         self.__res__ = dic_results
         self.__settings__ = dic_results.settings
 
         self.__ee__, self.__nn__ = self.__generate_grid__(seed)
 
+        print(self.__ee__)
+
         self.__F__, self.__coords__ = self._deformation_gradient_(self.__res__.xnodesT, self.__res__.ynodesT,
                                                                   self.__settings__.mesh,
                                                                   self.__settings__.mesh.element_def, self.__nn__,
                                                                   self.__ee__)
 
-    def __generate_grid__(self, seed):
-        self.__inc__ = 1. / (float(seed) - 1.)
+        elms_x, elms_y = np.meshgrid(np.arange(self.__settings__.mesh.n_elx),np.arange(self.__settings__.mesh.n_ely))
 
-        return np.meshgrid(np.arange(0., 1. + self.__inc__, self.__inc__),
-                           np.arange(0., 1. + self.__inc__, self.__inc__))
+        plt.imshow((self.__coords__[:,1,0,0,-1]-self.__coords__[:,1,0,0,0]).reshape(elms_x.shape),vmin=-0.5,vmax=.5,cmap=plt.cm.jet)
+        plt.show(block=True)
+
+
+        elms_x_fine, elms_y_fine = np.meshgrid(np.arange(0,self.__settings__.mesh.n_elx-1,0.1),np.arange(0,self.__settings__.mesh.n_ely-1,0.1))
+
+        F11_fine = map_coordinates((self.__coords__[:,1,0,0,-1]-self.__coords__[:,1,0,0,0]).reshape(elms_x.shape),[elms_y_fine.flatten(),elms_x_fine.flatten()],order=3).reshape(elms_x_fine.shape)
+
+        plt.imshow(F11_fine,vmin=-0.5,vmax=.5,cmap=plt.cm.jet)
+        plt.show(block=True)
+
+        print(F11_fine.shape)
+
+        #plt.plot(F11_fine[:,::50])
+        plt.plot(F11_fine[120,:])
+        plt.show()
+
+
+
+
+        print(self.__F__.shape)
+
+
+    def __generate_grid__(self, seed):
+
+        # TODO: Remove hack:
+        if seed ==1:
+            return np.meshgrid(np.array([0.5]),
+                           np.array([0.5]))
+
+        else:
+            self.__inc__ = 1. / (float(seed) - 1.)
+            return np.meshgrid(np.arange(0., 1. + self.__inc__, self.__inc__),
+                               np.arange(0., 1. + self.__inc__, self.__inc__))
 
     @staticmethod
     def _deformation_gradient_(xnodesT, ynodesT, msh, elm, e, n):
@@ -275,7 +316,7 @@ class Visualizer(object):
         self.images = images
         self.logger = logging.getLogger()
 
-    def show(self, field, component=(0, 0), frame=0):
+    def show(self, field, component=(0, 0), frame=0, **kwargs):
         """
         Show the field variable
 
@@ -343,7 +384,7 @@ class Visualizer(object):
             vmax = np.max(fvar)
             for i in range(fvar.shape[0]):
                 print(xs.shape,ys.shape,fvar.shape)
-                plt.contourf(xs[i,:], ys[i,:], fvar[i,:], 50, alpha=0.8)
+                plt.contourf(xs[i,:], ys[i,:], fvar[i,:], 50, alpha=0.8,**kwargs)
                 plt.clim(vmin=vmin,vmax=vmax)
 
         plt.colorbar()
