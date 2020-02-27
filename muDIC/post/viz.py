@@ -75,7 +75,7 @@ class Fields(object):
         """
 
         # Post Processing
-        nEl = 1
+        nEl = msh.n_elms
         ne = np.shape(e)[0]
         nn = np.shape(e)[1]
 
@@ -87,18 +87,15 @@ class Fields(object):
         Fstack = []
         coord_stack = []
 
+
+
         for el in range(nEl):
-            x_crd = np.einsum('ij,jn -> in', Nn, xnodesT)
-
-            y_crd = np.einsum('ij,jn -> in', Nn, ynodesT)
-
-            dxde = np.einsum('ij,jn -> in', dfde, xnodesT)
-
-            dxdn = np.einsum('ij,jn -> in', dfdn, xnodesT)
-
-            dyde = np.einsum('ij,jn -> in', dfde, ynodesT)
-
-            dydn = np.einsum('ij,jn -> in', dfdn, ynodesT)
+            x_crd = np.einsum('ij,jn -> in', Nn,  xnodesT[msh.ele[:,el] ,:])
+            y_crd = np.einsum('ij,jn -> in', Nn,  ynodesT[msh.ele[:,el] ,:])
+            dxde = np.einsum('ij,jn -> in', dfde, xnodesT[msh.ele[:,el] ,:])
+            dxdn = np.einsum('ij,jn -> in', dfdn, xnodesT[msh.ele[:,el] ,:])
+            dyde = np.einsum('ij,jn -> in', dfde, ynodesT[msh.ele[:,el] ,:])
+            dydn = np.einsum('ij,jn -> in', dfdn, ynodesT[msh.ele[:,el] ,:])
 
             c_confs = np.array([[dxde, dxdn], [dyde, dydn]])
             r_conf_inv = np.linalg.inv(np.rollaxis(c_confs[:, :, :, 0], 2, 0))
@@ -303,25 +300,25 @@ class Visualizer(object):
         keyword = field.replace(" ", "").lower()
 
         if keyword == "truestrain":
-            fvar = self.fields.true_strain()[0, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
+            fvar = self.fields.true_strain()[:, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
 
         elif keyword == "engstrain":
-            fvar = self.fields.eng_strain()[0, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
+            fvar = self.fields.eng_strain()[:, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
 
         elif keyword in ("displacement", "disp", "u"):
-            fvar = self.fields.disp()[0, component[0], :, :, frame]
-            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
+            fvar = self.fields.disp()[:, component[0], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
 
         elif keyword in ("coordinates", "coords", "coord"):
-            fvar = self.fields.coords()[0, component[0], :, :, frame]
-            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
+            fvar = self.fields.coords()[:, component[0], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
 
 
         elif keyword == "greenstrain":
-            fvar = self.fields.green_strain()[0, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
+            fvar = self.fields.green_strain()[:, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
 
         elif keyword == "residual":
             fvar = self.fields.residual(frame)
@@ -331,17 +328,27 @@ class Visualizer(object):
             self.logger.info("No valid field name was specified")
             return
 
-        if np.ndim(fvar) == 2:
+        if np.ndim(fvar) == 3:
             if self.images:
                 n,m = self.images[frame].shape
                 plt.imshow(self.images[frame], cmap=plt.cm.gray,origin="lower", extent=(0, m, 0, n))
                 #plt.imshow(self.images[frame], cmap=plt.cm.gray)
 
-            plt.contourf(xs, ys, fvar, 50, alpha=0.8)
-        else:
-            plt.tricontourf(xs, ys, fvar, 50, alpha=0.8)
+            #for i in range(fvar.shape[0]):
+                #print(xs.shape,ys.shape,fvar.shape)
+
+            #plt.contourf(xs.reshape(3,-1), ys.reshape(3,-1), fvar.reshape(3,-1), 50, alpha=0.8)
+        #else:
+            vmin = np.min(fvar)
+            vmax = np.max(fvar)
+            for i in range(fvar.shape[0]):
+                print(xs.shape,ys.shape,fvar.shape)
+                plt.contourf(xs[i,:], ys[i,:], fvar[i,:], 50, alpha=0.8)
+                plt.clim(vmin=vmin,vmax=vmax)
 
         plt.colorbar()
+        plt.clim(vmin=vmin, vmax=vmax)
+
         plt.show()
 
 

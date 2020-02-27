@@ -6,11 +6,12 @@ from copy import copy
 import numpy as np
 import scipy.ndimage as nd
 
-from .reference import generate_reference as generate_reference
+from .reference import generate_reference
+from .reference_q4 import generate_reference_Q4, find_elm_borders_mesh,normalized_zero_mean
 from ..IO.image_stack import ImageStack
 from ..elements.fieldInterpolator import FieldInterpolator
+from ..elements.q4 import Q4
 from ..mesh.meshUtilities import Mesh
-from ..solver.custom_exceptions import DidNotConverge
 from ..utils import convert_to_img_frame, find_element_borders
 
 
@@ -227,6 +228,123 @@ def correlate(inputs):
         return np.array(node_position_t), reference_stack, Ic_stacks
 
 
+
+def correlate_q4(inputs):
+    logger = logging.getLogger(__name__)
+
+    mesh = inputs.mesh
+    images = inputs.images
+    settings = inputs
+
+    # Do the initial setup
+
+    images.image_reader.precision = settings.precision
+
+    # Declare som empty arrays
+    xnodesT = np.zeros((settings.mesh.n_nodes, settings.max_nr_im))
+    ynodesT = np.zeros_like(xnodesT)
+
+    xnodesT[:, 0] = mesh.xnodes.copy()
+    ynodesT[:, 0] = mesh.ynodes.copy()
+
+    img = images[0]
+    nd.spline_filter(img, order=3, output=img)
+
+    # This is just to make the transition further easier...
+    n_nodes = settings.mesh.n_nodes
+    n_nodes_elm = settings.mesh.element_def.n_nodes
+    n_elms = settings.mesh.n_elms
+
+    node_hist = []
+
+    # Generate references
+    Nref, I0, K, B = generate_reference_Q4(settings.mesh, img, settings.mesh.element_def, norm=False)
+    pix_cord_local = [np.zeros((2, Nref[elm_nr].shape[0]), dtype=np.float64) for elm_nr in
+                      range(n_elms)]
+
+    # Instantiate empty arrays
+    di = np.zeros(n_nodes_elm * 2, dtype=np.float64)
+    dnod = np.zeros(n_nodes * 2, dtype=np.float64)
+    C = np.zeros(n_nodes * 2, dtype=np.float64)
+
+    for cim in range(1, settings.max_nr_im):
+        try:
+            # Update reference
+            if cim in settings.ref_update:
+                Nref, I0, K, B = generate_reference_Q4(settings.mesh, img, settings.elm, norm=False)
+                pix_cord_local = [np.zeros((2, Nref[elm_nr].shape[0]), dtype=np.float64) for elm_nr in
+                                  range(settings.mesh.n_elms)]
+                logging.info('Updating reference at frame %i', cim)
+
+            img = settings.images[cim]
+            nd.spline_filter(img, order=3,output=img)
+
+            # Find borders of the elements
+            borders = find_elm_borders_mesh(settings.mesh, settings.mesh.n_elms)
+
+            # Extract image within element borders with padding
+            img_frames = [img[borders[2, el].astype(int) - settings.pad:borders[3, el].astype(int) + settings.pad,
+                          borders[0, el].astype(int) - settings.pad:borders[1, el].astype(int) + settings.pad] for el in
+                          range(settings.mesh.n_elms)]
+
+            # Normalize image frame flux
+            if False:
+                img_frames = map(normalized_zero_mean, img_frames)
+
+            # Element loop
+            # TODO: This implementation does handle errors very pretty...
+            for it in range(settings.maxit):
+                C[:] = 0.0
+
+                for el in range(settings.mesh.n_elms):
+                    Ic = np.zeros_like(I0[el], dtype=np.float64)
+                    # Find current coordinates element within the elm_frame
+                    np.dot(Nref[el], settings.mesh.xnodes[settings.mesh.ele[:, el]] - borders[0, el] + settings.pad,
+                           out=pix_cord_local[el][1])
+                    np.dot(Nref[el], settings.mesh.ynodes[settings.mesh.ele[:, el]] - borders[2, el] + settings.pad,
+                           out=pix_cord_local[el][0])
+
+                    # Determine greyscale value at XYc
+                    nd.map_coordinates(img_frames[el],
+                                            pix_cord_local[el], order=settings.interpolation_order, prefilter=False, output=Ic)
+
+                    # Calculate B^T * dIK
+                    np.dot(B[el], (I0[el] - Ic), out=di)
+
+                    # TODO: This shape is awkvard
+                    # Order di to match format of K
+                    C[(settings.mesh.ele[:, el] + 1) * 2 - 2] += di[:settings.elm.n_nodes]
+                    C[(settings.mesh.ele[:, el] + 1) * 2 - 1] += di[settings.elm.n_nodes:]
+
+                # Calculate position increment as (B^T B)^-1 * (B^T*dIk) "Least squares solution"
+                np.dot(K, C, out=dnod)
+
+                # Add increment to nodal positions
+                settings.mesh.xnodes += dnod[::2]
+                settings.mesh.ynodes += dnod[1::2]
+
+                # Check for convergence
+                if np.max(np.abs(dnod)) < 1e-4:
+                    break
+
+            # Calculate correlation factor for this element
+
+            # Add converged nodal positions for current image
+            xnodesT[:, cim] = settings.mesh.xnodes
+            ynodesT[:, cim] = settings.mesh.ynodes
+
+            node_hist.append(np.array([settings.mesh.xnodes,settings.mesh.ynodes]))
+
+            logging.info('Frame nr: %i converged in %s iterations', cim, it)
+        except Exception as e:
+            logger.exception(e)
+            logger.info('Correlation failed')
+            break
+
+    logger.info("We are done now")
+    return np.array(node_hist), None, None
+
+
 class DICAnalysis(object):
 
     def __init__(self, inputs):
@@ -300,7 +418,12 @@ class DICAnalysis(object):
         return self.__input__
 
     def __solve__(self):
-        node_position, reference_stack, Ic_Stack = correlate(self.__input__)
+        if self.__input__.mesh.n_elms == 1:
+            node_position, reference_stack, Ic_Stack = correlate(self.__input__)
+        else:
+            node_position, reference_stack, Ic_Stack = correlate_q4(self.__input__)
+
+
         # TODO: Remove the need of transposing the matrices
         return node_position[:, 0, :].transpose(), node_position[:, 1,
                                                    :].transpose(), reference_stack, Ic_Stack
@@ -327,8 +450,8 @@ class DICAnalysis(object):
         else:
             inputs_checked.max_nr_im = len(inputs_checked.images)
 
-        if not isinstance(inputs_checked.mesh.element_def, FieldInterpolator):
-            raise TypeError('Finite element should be an instance of Finite_Element')
+        if not isinstance(inputs_checked.mesh.element_def, FieldInterpolator) and not isinstance(inputs_checked.mesh.element_def, Q4):
+            raise TypeError('Finite element should be an instance of FieldInterpolator')
         inputs_checked.elm = inputs_checked.mesh.element_def
 
         if not isinstance(inputs_checked.ref_update, (list, tuple)):
@@ -444,3 +567,5 @@ class DICOutput(object):
         self.Ic_stack = Ic_stack
         self.settings = settings
         self.settings.images = None
+
+

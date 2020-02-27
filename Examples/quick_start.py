@@ -14,8 +14,8 @@ images.set_filter(dic.filtering.lowpass_gaussian, sigma=1.)
 
 
 # Generate mesh
-mesher = dic.Mesher(deg_e=3, deg_n=3)
-mesh = mesher.mesh(images,Xc1=200,Xc2=1050,Yc1=200,Yc2=650,n_ely=8,n_elx=8, GUI=False)
+mesher = dic.Mesher(deg_e=3, deg_n=3,type="Q4")
+mesh = mesher.mesh(images,Xc1=200,Xc2=1050,Yc1=200,Yc2=650,n_ely=20,n_elx=10, GUI=False)
 
 
 # Instantiate settings object and set some settings manually
@@ -33,11 +33,11 @@ job = dic.DICAnalysis(settings)
 dic_results = job.run()
 
 # Calculate field values
-fields = dic.post.viz.Fields(dic_results)
+fields = dic.post.viz.Fields(dic_results,seed=3)
 
 # Show a field
 viz = dic.Visualizer(fields,images=images)
 
 # Uncomment the line below to see the results
-# viz.show(field="true strain", component = (1,1), frame = 39)
+viz.show(field="true strain", component = (1,1), frame = 30)
 
