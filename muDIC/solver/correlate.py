@@ -7,7 +7,7 @@ import numpy as np
 import scipy.ndimage as nd
 
 from .reference import generate_reference
-from .reference_q4 import generate_reference_Q4, find_elm_borders_mesh,normalized_zero_mean
+from .reference_q4 import generate_reference_Q4, find_elm_borders_mesh, normalized_zero_mean
 from ..IO.image_stack import ImageStack
 from ..elements.fieldInterpolator import FieldInterpolator
 from ..elements.q4 import Q4
@@ -104,8 +104,8 @@ def correlate_frames(node_pos, mesh, img, ref, settings):
             return np.array((dnod_x[:mesh.n_nodes], dnod_x[mesh.n_nodes:])), Ic, True
 
         # Reset array values
-    logger.info("Frame did not converge. Largest increment was %f pixels"%np.max(dnod))
-    return np.array((dnod_x[:mesh.n_nodes], dnod_x[mesh.n_nodes:])), Ic,False
+    logger.info("Frame did not converge. Largest increment was %f pixels" % np.max(dnod))
+    return np.array((dnod_x[:mesh.n_nodes], dnod_x[mesh.n_nodes:])), Ic, False
 
 
 def store_stripped_copy(reference_generator, storage):
@@ -187,7 +187,7 @@ def correlate(inputs):
             logger.info('Processing frame nr: %i', image_id)
 
             if settings.node_hist:
-                if len(settings.node_hist)>=image_id:
+                if len(settings.node_hist) >= image_id:
                     logger.info("Using initial conditions")
                     node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, image_id]
                 else:
@@ -207,7 +207,7 @@ def correlate(inputs):
                         pass
                     elif settings.noconvergence == "update":
                         reference = gen_ref(node_coords, mesh, images[image_id - 1], settings, image_id - 1)
-                        node_coords, Ic,conv = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
+                        node_coords, Ic, conv = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
                         if not conv:
                             break
                     elif settings.noconvergence == "break":
@@ -226,7 +226,6 @@ def correlate(inputs):
 
     finally:
         return np.array(node_position_t), reference_stack, Ic_stacks
-
 
 
 def correlate_q4(inputs):
@@ -256,6 +255,8 @@ def correlate_q4(inputs):
     n_elms = settings.mesh.n_elms
 
     node_hist = []
+    # Store the initial values
+    node_hist.append(np.array([settings.mesh.xnodes, settings.mesh.ynodes]))
 
     # Generate references
     Nref, I0, K, B = generate_reference_Q4(settings.mesh, img, settings.mesh.element_def, norm=False)
@@ -277,7 +278,7 @@ def correlate_q4(inputs):
                 logging.info('Updating reference at frame %i', cim)
 
             img = settings.images[cim]
-            nd.spline_filter(img, order=3,output=img)
+            nd.spline_filter(img, order=3, output=img)
 
             # Find borders of the elements
             borders = find_elm_borders_mesh(settings.mesh, settings.mesh.n_elms)
@@ -306,7 +307,8 @@ def correlate_q4(inputs):
 
                     # Determine greyscale value at XYc
                     nd.map_coordinates(img_frames[el],
-                                            pix_cord_local[el], order=settings.interpolation_order, prefilter=False, output=Ic)
+                                       pix_cord_local[el], order=settings.interpolation_order, prefilter=False,
+                                       output=Ic)
 
                     # Calculate B^T * dIK
                     np.dot(B[el], (I0[el] - Ic), out=di)
@@ -333,7 +335,7 @@ def correlate_q4(inputs):
             xnodesT[:, cim] = settings.mesh.xnodes
             ynodesT[:, cim] = settings.mesh.ynodes
 
-            node_hist.append(np.array([settings.mesh.xnodes,settings.mesh.ynodes]))
+            node_hist.append(np.array([settings.mesh.xnodes, settings.mesh.ynodes]))
 
             logging.info('Frame nr: %i converged in %s iterations', cim, it)
         except Exception as e:
@@ -423,7 +425,6 @@ class DICAnalysis(object):
         else:
             node_position, reference_stack, Ic_Stack = correlate_q4(self.__input__)
 
-
         # TODO: Remove the need of transposing the matrices
         return node_position[:, 0, :].transpose(), node_position[:, 1,
                                                    :].transpose(), reference_stack, Ic_Stack
@@ -450,7 +451,8 @@ class DICAnalysis(object):
         else:
             inputs_checked.max_nr_im = len(inputs_checked.images)
 
-        if not isinstance(inputs_checked.mesh.element_def, FieldInterpolator) and not isinstance(inputs_checked.mesh.element_def, Q4):
+        if not isinstance(inputs_checked.mesh.element_def, FieldInterpolator) and not isinstance(
+                inputs_checked.mesh.element_def, Q4):
             raise TypeError('Finite element should be an instance of FieldInterpolator')
         inputs_checked.elm = inputs_checked.mesh.element_def
 
@@ -463,7 +465,7 @@ class DICAnalysis(object):
         if type(inputs_checked.pad) is not int:
             raise TypeError('Padding width should be specified by an integer')
 
-        if not inputs_checked.noconvergence in ["ignore","update","break"]:
+        if not inputs_checked.noconvergence in ["ignore", "update", "break"]:
             raise ValueError("The action on no convergence is either ignore, update or break")
 
         return inputs_checked
@@ -472,7 +474,8 @@ class DICAnalysis(object):
 class DICInput(object):
 
     def __init__(self, mesh, image_stack, ref_update_frames=[50, 150], maxit=40, max_nr_im=None, pad=10,
-                 store_internals=False, node_hist=None, precision="double", interpolation_order=3, block_size=1e7,noconvergence="ignore"):
+                 store_internals=False, node_hist=None, precision="double", interpolation_order=3, block_size=1e7,
+                 noconvergence="ignore"):
 
         """
          DIC output container
@@ -567,5 +570,3 @@ class DICOutput(object):
         self.Ic_stack = Ic_stack
         self.settings = settings
         self.settings.images = None
-
-
