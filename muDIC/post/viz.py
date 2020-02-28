@@ -7,7 +7,7 @@ from scipy.ndimage import map_coordinates
 
 class Fields(object):
     # TODO: Remove Q4 argument. This should be detected automaticaly
-    def __init__(self, dic_results, seed=21,Q4=True):
+    def __init__(self, dic_results, seed=21, Q4=True,upscale=10):
         """
         Fields calculates field variables from the DIC-results.
         The implementation is lazy, hence getter methods have to be used.
@@ -34,12 +34,10 @@ class Fields(object):
 
         self.logger = logging.getLogger()
 
-
         # TODO: Remove hacking below
         if Q4:
             # Use only the centroid
-            seed=1
-
+            seed = 1
 
         # The type is implicitly checked by using the interface
         self.__res__ = dic_results
@@ -54,37 +52,68 @@ class Fields(object):
                                                                   self.__settings__.mesh.element_def, self.__nn__,
                                                                   self.__ee__)
 
-        elms_x, elms_y = np.meshgrid(np.arange(self.__settings__.mesh.n_elx),np.arange(self.__settings__.mesh.n_ely))
+        if Q4:
+            # Flatten things form multiple elements to a grid of elements
+            grid_shape = (self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx)
+            n_times = self.__F__.shape[-1]
+            self.__F2__ = np.zeros(
+                (1, 2, 2, self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx, self.__F__.shape[-1]))
+            for i in range(2):
+                for j in range(2):
+                    for t in range(n_times):
+                        self.__F2__[0, i, j, :, :, t] = self.__F__[:, i, j, 0, 0, t].reshape(grid_shape)
 
-        plt.imshow((self.__coords__[:,1,0,0,-1]-self.__coords__[:,1,0,0,0]).reshape(elms_x.shape),vmin=-0.5,vmax=.5,cmap=plt.cm.jet)
-        plt.show(block=True)
-
-
-        elms_x_fine, elms_y_fine = np.meshgrid(np.arange(0,self.__settings__.mesh.n_elx-1,0.1),np.arange(0,self.__settings__.mesh.n_ely-1,0.1))
-
-        F11_fine = map_coordinates((self.__coords__[:,1,0,0,-1]-self.__coords__[:,1,0,0,0]).reshape(elms_x.shape),[elms_y_fine.flatten(),elms_x_fine.flatten()],order=3).reshape(elms_x_fine.shape)
-
-        plt.imshow(F11_fine,vmin=-0.5,vmax=.5,cmap=plt.cm.jet)
-        plt.show(block=True)
-
-        print(F11_fine.shape)
-
-        #plt.plot(F11_fine[:,::50])
-        plt.plot(F11_fine[120,:])
-        plt.show()
+            self.__coords2__ = np.zeros(
+                (1, 2, self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx, self.__F__.shape[-1]))
+            for i in range(2):
+                for t in range(n_times):
+                    self.__coords2__[0, i, :, :, t] = self.__coords__[:, i, 0, 0, t].reshape(grid_shape)
 
 
 
+            if Q4 and upscale != 1.:
+                elms_x_fine, elms_y_fine = np.meshgrid(np.arange(0, self.__settings__.mesh.n_elx - 1, 1./upscale),
+                                                       np.arange(0, self.__settings__.mesh.n_ely - 1, 1./upscale))
 
-        print(self.__F__.shape)
+
+                self.__F3__ = np.zeros(
+                    (1, 2, 2, elms_x_fine.shape[0], elms_x_fine.shape[1], self.__F__.shape[-1]))
+
+
+                self.__coords3__ = np.zeros(
+                    (1, 2, elms_x_fine.shape[0], elms_x_fine.shape[1], self.__F__.shape[-1]))
+
+
+                for i in range(2):
+                    for t in range(n_times):
+                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords2__[0, i, :, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape)
+
+
+                for i in range(2):
+                    for j in range(2):
+                        for t in range(n_times):
+                            self.__F3__[0, i,j, :, :, t] = map_coordinates(self.__F2__[0, i, j,:, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape)
+
+
+                self.__coords__ = self.__coords3__
+                self.__F__ = self.__F3__
+
+
+
+
+
+        #plt.imshow(self.__coords3__[0, 1, :, :, -1]-self.__coords3__[0, 1, :, :, 0],cmap=plt.cm.jet)
+        #plt.show(block=True)
+
+
 
 
     def __generate_grid__(self, seed):
 
         # TODO: Remove hack:
-        if seed ==1:
+        if seed == 1:
             return np.meshgrid(np.array([0.5]),
-                           np.array([0.5]))
+                               np.array([0.5]))
 
         else:
             self.__inc__ = 1. / (float(seed) - 1.)
@@ -128,15 +157,13 @@ class Fields(object):
         Fstack = []
         coord_stack = []
 
-
-
         for el in range(nEl):
-            x_crd = np.einsum('ij,jn -> in', Nn,  xnodesT[msh.ele[:,el] ,:])
-            y_crd = np.einsum('ij,jn -> in', Nn,  ynodesT[msh.ele[:,el] ,:])
-            dxde = np.einsum('ij,jn -> in', dfde, xnodesT[msh.ele[:,el] ,:])
-            dxdn = np.einsum('ij,jn -> in', dfdn, xnodesT[msh.ele[:,el] ,:])
-            dyde = np.einsum('ij,jn -> in', dfde, ynodesT[msh.ele[:,el] ,:])
-            dydn = np.einsum('ij,jn -> in', dfdn, ynodesT[msh.ele[:,el] ,:])
+            x_crd = np.einsum('ij,jn -> in', Nn, xnodesT[msh.ele[:, el], :])
+            y_crd = np.einsum('ij,jn -> in', Nn, ynodesT[msh.ele[:, el], :])
+            dxde = np.einsum('ij,jn -> in', dfde, xnodesT[msh.ele[:, el], :])
+            dxdn = np.einsum('ij,jn -> in', dfdn, xnodesT[msh.ele[:, el], :])
+            dyde = np.einsum('ij,jn -> in', dfde, ynodesT[msh.ele[:, el], :])
+            dydn = np.einsum('ij,jn -> in', dfdn, ynodesT[msh.ele[:, el], :])
 
             c_confs = np.array([[dxde, dxdn], [dyde, dydn]])
             r_conf_inv = np.linalg.inv(np.rollaxis(c_confs[:, :, :, 0], 2, 0))
@@ -341,25 +368,25 @@ class Visualizer(object):
         keyword = field.replace(" ", "").lower()
 
         if keyword == "truestrain":
-            fvar = self.fields.true_strain()[:, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+            fvar = self.fields.true_strain()[0, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
         elif keyword == "engstrain":
-            fvar = self.fields.eng_strain()[:, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+            fvar = self.fields.eng_strain()[0, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
         elif keyword in ("displacement", "disp", "u"):
-            fvar = self.fields.disp()[:, component[0], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+            fvar = self.fields.disp()[0, component[0], :, :, frame]
+            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
         elif keyword in ("coordinates", "coords", "coord"):
-            fvar = self.fields.coords()[:, component[0], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+            fvar = self.fields.coords()[0, component[0], :, :, frame]
+            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
 
         elif keyword == "greenstrain":
-            fvar = self.fields.green_strain()[:, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+            fvar = self.fields.green_strain()[0, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
         elif keyword == "residual":
             fvar = self.fields.residual(frame)
@@ -369,26 +396,21 @@ class Visualizer(object):
             self.logger.info("No valid field name was specified")
             return
 
-        if np.ndim(fvar) == 3:
+        if np.ndim(fvar) == 2:
             if self.images:
-                n,m = self.images[frame].shape
-                plt.imshow(self.images[frame], cmap=plt.cm.gray,origin="lower", extent=(0, m, 0, n))
-                #plt.imshow(self.images[frame], cmap=plt.cm.gray)
+                n, m = self.images[frame].shape
+                plt.imshow(self.images[frame], cmap=plt.cm.gray, origin="lower", extent=(0, m, 0, n))
+                # plt.imshow(self.images[frame], cmap=plt.cm.gray)
 
-            #for i in range(fvar.shape[0]):
-                #print(xs.shape,ys.shape,fvar.shape)
+            # for i in range(fvar.shape[0]):
+            # print(xs.shape,ys.shape,fvar.shape)
 
-            #plt.contourf(xs.reshape(3,-1), ys.reshape(3,-1), fvar.reshape(3,-1), 50, alpha=0.8)
-        #else:
-            vmin = np.min(fvar)
-            vmax = np.max(fvar)
-            for i in range(fvar.shape[0]):
-                print(xs.shape,ys.shape,fvar.shape)
-                plt.contourf(xs[i,:], ys[i,:], fvar[i,:], 50, alpha=0.8,**kwargs)
-                plt.clim(vmin=vmin,vmax=vmax)
+            plt.contourf(xs, ys, fvar, 50, alpha=0.8,**kwargs)
+            # else:
+
 
         plt.colorbar()
-        plt.clim(vmin=vmin, vmax=vmax)
+        #plt.clim(vmin=vmin, vmax=vmax)
 
         plt.show()
 
