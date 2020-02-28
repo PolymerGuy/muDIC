@@ -3,11 +3,13 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage import map_coordinates
+from muDIC.elements.b_splines import BSplineSurface
+from muDIC.elements.q4 import Q4
 
 
 class Fields(object):
     # TODO: Remove Q4 argument. This should be detected automaticaly
-    def __init__(self, dic_results, seed=21, Q4=True,upscale=10):
+    def __init__(self, dic_results, seed=21,upscale=10):
         """
         Fields calculates field variables from the DIC-results.
         The implementation is lazy, hence getter methods have to be used.
@@ -34,14 +36,25 @@ class Fields(object):
 
         self.logger = logging.getLogger()
 
-        # TODO: Remove hacking below
-        if Q4:
-            # Use only the centroid
-            seed = 1
+
+
 
         # The type is implicitly checked by using the interface
         self.__res__ = dic_results
         self.__settings__ = dic_results.settings
+
+
+        if isinstance(self.__settings__.mesh.element_def,Q4):
+            q4 = True
+        else:
+            q4 = False
+
+        # TODO: Remove hacking below
+        if q4:
+            # Use only the centroid
+            seed = 1
+
+
 
         self.__ee__, self.__nn__ = self.__generate_grid__(seed)
 
@@ -52,7 +65,7 @@ class Fields(object):
                                                                   self.__settings__.mesh.element_def, self.__nn__,
                                                                   self.__ee__)
 
-        if Q4:
+        if q4:
             # Flatten things form multiple elements to a grid of elements
             grid_shape = (self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx)
             n_times = self.__F__.shape[-1]

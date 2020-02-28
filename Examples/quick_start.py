@@ -14,7 +14,7 @@ images = dic.IO.image_stack_from_folder(path, file_type='.tif')
 
 
 # Generate mesh
-mesher = dic.Mesher(deg_e=3, deg_n=3)
+mesher = dic.Mesher(deg_e=3, deg_n=3,type="Q4")
 mesh = mesher.mesh(images,Xc1=20,Xc2=1980,Yc1=19,Yc2=480,n_ely=25,n_elx=80, GUI=False)
 
 
@@ -35,7 +35,7 @@ job = dic.DICAnalysis(settings)
 dic_results = job.run()
 
 # Calculate field values
-fields = dic.post.viz.Fields(dic_results,seed=201,Q4=False)
+fields = dic.post.viz.Fields(dic_results,seed=201)
 
 # Show a field
 viz = dic.Visualizer(fields,images=images)
