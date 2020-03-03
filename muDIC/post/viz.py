@@ -70,42 +70,45 @@ class Fields(object):
             grid_shape = (self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx)
             n_times = self.__F__.shape[-1]
             self.__F2__ = np.zeros(
-                (1, 2, 2, self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx, self.__F__.shape[-1]))
+                (1, 2, 2, self.__settings__.mesh.n_elx, self.__settings__.mesh.n_ely, self.__F__.shape[-1]))
             for i in range(2):
                 for j in range(2):
                     for t in range(n_times):
-                        self.__F2__[0, i, j, :, :, t] = self.__F__[:, i, j, 0, 0, t].reshape(grid_shape)
+                        self.__F2__[0, i, j, :, :, t] = self.__F__[:, i, j, 0, 0, t].reshape(grid_shape).transpose()
 
             self.__coords2__ = np.zeros(
-                (1, 2, self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx, self.__F__.shape[-1]))
+                (1, 2, self.__settings__.mesh.n_elx, self.__settings__.mesh.n_ely, self.__F__.shape[-1]))
             for i in range(2):
                 for t in range(n_times):
-                    self.__coords2__[0, i, :, :, t] = self.__coords__[:, i, 0, 0, t].reshape(grid_shape)
+                    self.__coords2__[0, i, :, :, t] = self.__coords__[:, i, 0, 0, t].reshape(grid_shape).transpose()
+
+            self.__coords__ = self.__coords2__
+            self.__F__ = self.__F2__
 
 
 
             if Q4 and upscale != 1.:
-                elms_x_fine, elms_y_fine = np.meshgrid(np.arange(0, self.__settings__.mesh.n_elx - 1, 1./upscale),
+                elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, self.__settings__.mesh.n_elx - 1, 1./upscale),
                                                        np.arange(0, self.__settings__.mesh.n_ely - 1, 1./upscale))
 
 
                 self.__F3__ = np.zeros(
-                    (1, 2, 2, elms_x_fine.shape[0], elms_x_fine.shape[1], self.__F__.shape[-1]))
+                    (1, 2, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
 
 
                 self.__coords3__ = np.zeros(
-                    (1, 2, elms_x_fine.shape[0], elms_x_fine.shape[1], self.__F__.shape[-1]))
+                    (1, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
 
 
                 for i in range(2):
                     for t in range(n_times):
-                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords2__[0, i, :, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape)
+                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords2__[0, i, :, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape).transpose()
 
 
                 for i in range(2):
                     for j in range(2):
                         for t in range(n_times):
-                            self.__F3__[0, i,j, :, :, t] = map_coordinates(self.__F2__[0, i, j,:, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape)
+                            self.__F3__[0, i,j, :, :, t] = map_coordinates(self.__F2__[0, i, j,:, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape).transpose()
 
 
                 self.__coords__ = self.__coords3__
