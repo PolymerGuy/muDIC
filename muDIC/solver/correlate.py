@@ -79,7 +79,7 @@ def correlate_frames(node_pos, mesh, img, ref, settings):
     pixel_pos = np.zeros((2, ref.n_pixels), dtype=settings.precision)
     dnod_x = np.zeros(mesh.n_nodes * 2)
 
-    image_filtered = nd.spline_filter(img, order=3).transpose()
+    image_filtered = nd.spline_filter(img, order=settings.interpolation_order).transpose()
 
     for it in range(settings.maxit):
 
@@ -247,7 +247,7 @@ def correlate_q4(inputs):
     ynodesT[:, 0] = mesh.ynodes.copy()
 
     img = images[0]
-    nd.spline_filter(img, order=3, output=img)
+    #nd.spline_filter(img, order=3, output=img)
 
     # This is just to make the transition further easier...
     n_nodes = settings.mesh.n_nodes
@@ -278,7 +278,7 @@ def correlate_q4(inputs):
                 logging.info('Updating reference at frame %i', cim)
 
             img = settings.images[cim]
-            nd.spline_filter(img, order=3, output=img)
+            nd.spline_filter(img, order=settings.interpolation_order, output=img)
 
             # Find borders of the elements
             borders = find_elm_borders_mesh(settings.mesh, settings.mesh.n_elms)
