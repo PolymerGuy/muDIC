@@ -271,7 +271,7 @@ def correlate_q4(inputs):
         try:
             # Update reference
             if cim in settings.ref_update:
-                Nref, I0, K, B = generate_reference_Q4(settings.mesh, img, settings.elm, norm=False)
+                Nref, I0, K, B = generate_reference_Q4(settings.mesh, settings.images[cim-1], settings.elm, norm=False)
                 pix_cord_local = [np.zeros((2, Nref[elm_nr].shape[0]), dtype=np.float64) for elm_nr in
                                   range(settings.mesh.n_elms)]
                 logging.info('Updating reference at frame %i', cim)
