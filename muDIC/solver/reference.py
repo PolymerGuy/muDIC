@@ -174,6 +174,12 @@ def identify_pixels_within_frame(xnod, ynod, elm, over_sampling=1.1):
         There is no guarantee that all pixels are found, so when in doubt, increase the over_sampling factor.
 
         """
+
+    logger = logging.getLogger(__name__)
+
+    # TODO: Added this as prototype
+    chunk_size = 1000000
+
     x_min, x_max = find_borders(xnod)
     y_min, y_max = find_borders(ynod)
 
@@ -183,8 +189,21 @@ def identify_pixels_within_frame(xnod, ynod, elm, over_sampling=1.1):
     es = es.flatten()
     ns = ns.flatten()
 
-    pixel_xs = np.dot(elm.Nn(es, ns), xnod)
-    pixel_ys = np.dot(elm.Nn(es, ns), ynod)
+    num_blocks = np.ceil(len(es) / chunk_size).astype(np.int)
+    logger.info("Splitting in %i block"%num_blocks)
+
+
+
+    es_blocks = np.array_split(es, num_blocks)
+    ns_blocks = np.array_split(ns, num_blocks)
+
+    pixel_xs = np.array([])
+    pixel_ys = np.array([])
+
+    for i in range(num_blocks):
+        pixel_xs = np.append(pixel_xs, np.dot(elm.Nn(es_blocks[i], ns_blocks[i]), xnod))
+        pixel_ys = np.append(pixel_ys, np.dot(elm.Nn(es_blocks[i], ns_blocks[i]), ynod))
+
 
     pixel_xs_closest = np.around(pixel_xs).astype(np.int)
     pixel_ys_closest = np.around(pixel_ys).astype(np.int)
@@ -201,7 +220,7 @@ def identify_pixels_within_frame(xnod, ynod, elm, over_sampling=1.1):
     return pixel_x, pixel_y, pixel_es, pixel_ns
 
 
-def find_covered_pixel_blocks(node_x, node_y, elm,xs=None,ys=None,keep_all=False, max_iter=200, block_size=1e7, tol=1.e-6):
+def find_covered_pixel_blocks(node_x, node_y, elm,xs=None,ys=None,keep_all=False, max_iter=200, block_size=1e5, tol=1.e-6):
     """
     Find element coordinates to all pixels covered by the element.
 
@@ -255,6 +274,7 @@ def find_covered_pixel_blocks(node_x, node_y, elm,xs=None,ys=None,keep_all=False
     found_x = []
     found_y = []
 
+
     # These are just estimates
     if xs is not None and ys is not None:
         pix_Xs, pix_Ys = xs,ys
@@ -263,10 +283,10 @@ def find_covered_pixel_blocks(node_x, node_y, elm,xs=None,ys=None,keep_all=False
     else:
         pix_Xs, pix_Ys, pix_es, pix_ns = identify_pixels_within_frame(node_x, node_y, elm)
 
-
+    block_size = 1.e5
     # Split into blocks
-    n_pix_in_block = block_size / np.float(len(node_x))
-    num_blocks = np.ceil(len(pix_es) / n_pix_in_block).astype(np.int)
+    #n_pix_in_block = block_size / np.float(len(node_x))
+    num_blocks = np.ceil(len(pix_es) / block_size).astype(np.int)
     logger.info("Splitting in %s blocks:" % str(num_blocks))
 
     pix_e_blocks = np.array_split(pix_es, num_blocks)
@@ -383,12 +403,15 @@ def generate_reference(nodal_position, mesh, image, settings, image_id=None):
         K = np.zeros((2 * mesh.n_nodes, num_pixels), dtype=settings.precision)
         A = np.zeros((mesh.n_nodes * 2, mesh.n_nodes * 2), dtype=settings.precision)
 
+        #TODO: We here use the whole image and not only the covered pixels?
         img_covered = image[np.concatenate(pixel_y_blocks), np.concatenate(pixel_x_blocks)]
 
         # Calculate A = B^T * B
         for block_id in range(num_blocks):
             block_len = pixel_e_blocks[block_id].shape[0]
             B = np.zeros((block_len, 2 * mesh.n_nodes), dtype=settings.precision)
+
+            print("woopy")
 
             # Weight the image gradients with the value of the shape functions
             B[:, :elm.n_nodes] = (
