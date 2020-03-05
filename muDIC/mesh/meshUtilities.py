@@ -111,7 +111,7 @@ def make_grid(c1x, c1y, c2x, c2y, ny, nx, elm):
 
 
 class Mesher(object):
-    def __init__(self, deg_e=1, deg_n=1, type="spline"):
+    def __init__(self, deg_e=1, deg_n=1, type="q4"):
 
         """
         Mesher utility
