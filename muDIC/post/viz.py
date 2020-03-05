@@ -9,7 +9,7 @@ from muDIC.elements.q4 import Q4
 
 class Fields(object):
     # TODO: Remove Q4 argument. This should be detected automaticaly
-    def __init__(self, dic_results, seed=21,upscale=10):
+    def __init__(self, dic_results, seed=21,upscale=1):
         """
         Fields calculates field variables from the DIC-results.
         The implementation is lazy, hence getter methods have to be used.
