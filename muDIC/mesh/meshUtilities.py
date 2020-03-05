@@ -24,6 +24,9 @@ def make_grid_Q4(c1x, c1y, c2x, c2y, nx, ny, elm):
     :param elm: Finite element instance
     :return: Connectivity matrix, X-coordinates of nodes, Y-Coordinates of nodes
     """
+
+    n_decimals = 2
+
     elmwidth = float(c2x - c1x) / float(nx)
     elmheigt = float(c2y - c1y) / float(ny)
 
@@ -35,8 +38,8 @@ def make_grid_Q4(c1x, c1y, c2x, c2y, nx, ny, elm):
 
     for i in range(ny):
         for j in range(nx):
-            elements.append(zip((ynodes[:] + elmheigt * i), (xnodes[:] + elmwidth * j)))
-            nodes.update(zip((ynodes[:] + elmheigt * i), (xnodes[:] + elmwidth * j)))
+            elements.append(zip(np.around(ynodes[:] + elmheigt * i,n_decimals), np.around(xnodes[:] + elmwidth * j,n_decimals)))
+            nodes.update(zip(np.around(ynodes[:] + elmheigt * i,n_decimals), np.around(xnodes[:] + elmwidth * j,n_decimals)))
 
     nodes = sorted(list(nodes))
 
