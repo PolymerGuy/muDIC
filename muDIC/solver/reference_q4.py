@@ -1,5 +1,6 @@
 import numpy as np
 from ..utils import find_borders
+from .reference import Reference
 
 import numpy as np
 
@@ -17,13 +18,13 @@ def find_borders(coord):
 
 
 
-def find_elm_borders_mesh(mesh, n_elms):
+def find_elm_borders_mesh(node_coords,mesh, n_elms):
     # [Xmin_Xmax,Ymin,Ymax,elm_nr]
     borders = np.zeros((4, n_elms))
 
     for el in range(n_elms):
-        borders[:2, el] = find_borders(mesh.xnodes[mesh.ele[:, el]])
-        borders[2:, el] = find_borders(mesh.ynodes[mesh.ele[:, el]])
+        borders[:2, el] = find_borders(node_coords[0,mesh.ele[:, el]])
+        borders[2:, el] = find_borders(node_coords[1,mesh.ele[:, el]])
 
     return borders
 
@@ -79,7 +80,8 @@ def find_element_coordinates_q4(xnod, ynod, elm):
     return [ep, ny, X, Y]
 
 
-def generate_reference_Q4(mesh, im, elm, norm=False):
+def generate_reference_Q4(node_coords, mesh, im, settings, norm=False,image_id=0):
+    elm = settings.mesh.element_def
 
     nNodes, nEl = np.shape(mesh.ele)
 
@@ -97,7 +99,7 @@ def generate_reference_Q4(mesh, im, elm, norm=False):
 
 
     for el in range(nEl):
-        epE[el], nyE[el], Xe[el], Ye[el] = find_element_coordinates_q4(mesh.xnodes[mesh.ele[:, el]], mesh.ynodes[mesh.ele[:, el]], elm)
+        epE[el], nyE[el], Xe[el], Ye[el] = find_element_coordinates_q4(node_coords[0,mesh.ele[:, el]], node_coords[1,mesh.ele[:, el]], elm)
 
         Nref[el] = elm.Nn(epE[el], nyE[el])
 
@@ -138,5 +140,8 @@ def generate_reference_Q4(mesh, im, elm, norm=False):
 
     K = np.linalg.inv(K)
 
+    # TODO: Fill in the rest
+    return Reference(Nref, I0, K, B, None, None, None,
+              image_id=None)
 
-    return Nref, I0, K, B
+    #return Nref, I0, K, B
