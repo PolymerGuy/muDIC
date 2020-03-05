@@ -274,6 +274,7 @@ def find_covered_pixel_blocks(node_x, node_y, elm,xs=None,ys=None,keep_all=False
     found_x = []
     found_y = []
 
+
     # These are just estimates
     if xs is not None and ys is not None:
         pix_Xs, pix_Ys = xs,ys

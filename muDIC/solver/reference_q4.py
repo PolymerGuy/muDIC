@@ -4,6 +4,7 @@ from ..utils import find_borders
 import numpy as np
 
 
+
 def normalized_zero_mean(im):
     # Zero mean normalized standard deviation
     return (im-np.average(im))/np.std(im)
@@ -126,10 +127,8 @@ def generate_reference_Q4(mesh, im, elm, norm=False):
         for i in range(elm.n_nodes):
             B[el][i, :] = np.array([I0grad[el][0] * Nref[el][:, i]])
             B[el][i + elm.n_nodes, :] = np.array([I0grad[el][1] * Nref[el][:, i]])
-
         # Calculate B^T * B
         A = np.dot(B[el], B[el].transpose())
-
         # Assemble K matrix
         K[np.ix_((mesh.ele[:, el] + 1) * 2 - 2, (mesh.ele[:, el] + 1) * 2 - 2)] += A[:elm.n_nodes, :elm.n_nodes]  # OK
         K[np.ix_((mesh.ele[:, el] + 1) * 2 - 2, (mesh.ele[:, el] + 1) * 2 - 1)] += A[:elm.n_nodes, elm.n_nodes:]
@@ -137,7 +136,6 @@ def generate_reference_Q4(mesh, im, elm, norm=False):
         K[np.ix_((mesh.ele[:, el] + 1) * 2 - 1, (mesh.ele[:, el] + 1) * 2 - 1)] += A[elm.n_nodes:, elm.n_nodes:]
 
 
-    # Calculate K inverse
     K = np.linalg.inv(K)
 
 
