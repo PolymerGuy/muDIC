@@ -411,8 +411,6 @@ def generate_reference(nodal_position, mesh, image, settings, image_id=None):
             block_len = pixel_e_blocks[block_id].shape[0]
             B = np.zeros((block_len, 2 * mesh.n_nodes), dtype=settings.precision)
 
-            print("woopy")
-
             # Weight the image gradients with the value of the shape functions
             B[:, :elm.n_nodes] = (
                     img_grad[1][pixel_y_blocks[block_id], pixel_x_blocks[block_id]][:, np.newaxis] * elm.Nn(
