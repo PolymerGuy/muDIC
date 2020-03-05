@@ -247,7 +247,6 @@ def correlate_q4(inputs):
     ynodesT[:, 0] = mesh.ynodes.copy()
 
     img = images[0]
-    #nd.spline_filter(img, order=3, output=img)
 
     # This is just to make the transition further easier...
     n_nodes = settings.mesh.n_nodes
