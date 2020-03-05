@@ -56,9 +56,9 @@ class Fields(object):
 
 
 
+
         self.__ee__, self.__nn__ = self.__generate_grid__(seed)
 
-        print(self.__ee__)
 
         self.__F__, self.__coords__ = self._deformation_gradient_(self.__res__.xnodesT, self.__res__.ynodesT,
                                                                   self.__settings__.mesh,
@@ -116,14 +116,6 @@ class Fields(object):
 
 
 
-
-
-        #plt.imshow(self.__coords3__[0, 1, :, :, -1]-self.__coords3__[0, 1, :, :, 0],cmap=plt.cm.jet)
-        #plt.show(block=True)
-
-
-
-
     def __generate_grid__(self, seed):
 
         # TODO: Remove hack:
@@ -132,9 +124,18 @@ class Fields(object):
                                np.array([0.5]))
 
         else:
-            self.__inc__ = 1. / (float(seed) - 1.)
-            return np.meshgrid(np.arange(0., 1. + self.__inc__, self.__inc__),
-                               np.arange(0., 1. + self.__inc__, self.__inc__))
+
+            if np.ndim(seed)==1:
+
+                #return np.meshgrid(np.arange(0., 1. + self.__incx__, self.__incx__),
+                #                   np.arange(0., 1. + self.__incy__, self.__incy__))
+                return np.meshgrid(np.linspace(0., 1., seed[0]),
+                                   np.linspace(0., 1., seed[1]))
+
+            else:
+                self.__inc__ = 1. / (float(seed) - 1.)
+                return np.meshgrid(np.arange(0., 1. + self.__inc__, self.__inc__),
+                                   np.arange(0., 1. + self.__inc__, self.__inc__))
 
     @staticmethod
     def _deformation_gradient_(xnodesT, ynodesT, msh, elm, e, n):
