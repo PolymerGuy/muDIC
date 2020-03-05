@@ -178,12 +178,14 @@ def correlate(inputs):
     else:
         node_coords = np.array((mesh.xnodes, mesh.ynodes), dtype=settings.precision)
 
+    node_position_t.append(node_coords)
+
     reference = gen_ref(node_coords, mesh, images[0], settings, image_id=0)
 
     # Correlate the image frames
 
     try:
-        for image_id in range(settings.max_nr_im):
+        for image_id in range(1,settings.max_nr_im-1):
             logger.info('Processing frame nr: %i', image_id)
 
             if settings.node_hist:
@@ -229,8 +231,10 @@ def correlate(inputs):
 
 
 
-def correlate_img_to_ref_q4(node_coords, mesh, img, ref, settings):
+def correlate_img_to_ref_q4(node_coordss, mesh, img, ref, settings):
     # Instantiate empty arrays
+
+    node_coords = node_coordss.copy()
 
     img = nd.spline_filter(img, order=settings.interpolation_order)
 
@@ -292,11 +296,11 @@ def correlate_img_to_ref_q4(node_coords, mesh, img, ref, settings):
 
         # Check for convergence
         if np.max(np.abs(dnod)) < settings.tol:
-            break
+            logging.info('Converged in %s iterations'%it)
+            return node_coords,Ic,True
 
-    logging.info('Frame nr: %i converged in %s iterations', 0, it)
-
-    return node_coords,Ic,True
+    logging.info('Did not converged in %s iterations last increment was %0.4f' % (it,np.max(dnod)))
+    return node_coords, Ic, False
 
     # Calculate correlation factor for this element
 
@@ -332,6 +336,8 @@ def correlate_q4(inputs):
     reference_stack = list()
     node_position_t = list()
 
+
+
     if settings.store_internals:
         gen_ref = store_stripped_copy(generate_reference_Q4, storage=reference_stack)
     else:
@@ -342,12 +348,15 @@ def correlate_q4(inputs):
     else:
         node_coords = np.array((mesh.xnodes, mesh.ynodes), dtype=settings.precision)
 
+    node_position_t.append(node_coords)
+
+
     reference = gen_ref(node_coords, mesh, images[0], settings, image_id=0)
 
     # Correlate the image frames
 
     try:
-        for image_id in range(settings.max_nr_im):
+        for image_id in range(1,settings.max_nr_im):
             logger.info('Processing frame nr: %i', image_id)
 
             if settings.node_hist:
@@ -393,76 +402,6 @@ def correlate_q4(inputs):
 
 
 
-
-
-
-def correlate_q4x(inputs):
-    logger = logging.getLogger(__name__)
-
-    mesh = inputs.mesh
-    images = inputs.images
-    settings = inputs
-
-    # Do the initial setup
-
-    images.image_reader.precision = settings.precision
-
-    # Declare som empty arrays
-    xnodesT = np.zeros((settings.mesh.n_nodes, settings.max_nr_im))
-    ynodesT = np.zeros_like(xnodesT)
-
-    xnodesT[:, 0] = mesh.xnodes.copy()
-    ynodesT[:, 0] = mesh.ynodes.copy()
-
-    img = images[0]
-
-    # This is just to make the transition further easier...
-
-
-    node_hist = []
-    # Store the initial values
-    node_hist.append(np.array([settings.mesh.xnodes, settings.mesh.ynodes]))
-
-    node_coords = np.array((mesh.xnodes, mesh.ynodes), dtype=settings.precision)
-
-    # Generate references
-    ref= generate_reference_Q4(node_coords, settings.mesh, img, settings.mesh.element_def, norm=False)
-
-
-
-
-
-
-    for image_id in range(1, settings.max_nr_im):
-        logger.info('Processing frame nr: %i', image_id)
-        try:
-            # Update reference
-            if image_id in settings.ref_update:
-                ref = generate_reference_Q4(node_coords, settings.mesh, settings.images[image_id-1], settings.elm, norm=False)
-                pix_cord_local = [np.zeros((2, ref.Nref_stack[elm_nr].shape[0]), dtype=np.float64) for elm_nr in
-                                  range(settings.mesh.n_elms)]
-                logging.info('Updating reference at frame %i', image_id)
-
-            img = settings.images[image_id]
-
-
-
-            node_coords, Ic, conv = correlate_img_to_ref_q4(node_coords, mesh,img,ref,settings)
-
-
-            # Add converged nodal positions for current image
-            xnodesT[:, image_id] = node_coords[0,:]
-            ynodesT[:, image_id] = node_coords[1,:]
-
-            node_hist.append(np.array([node_coords[0,:], node_coords[1,:]]))
-
-        except Exception as e:
-            logger.exception(e)
-            logger.info('Correlation failed')
-            break
-
-    logger.info("We are done now")
-    return np.array(node_hist), None, None
 
 
 class DICAnalysis(object):
