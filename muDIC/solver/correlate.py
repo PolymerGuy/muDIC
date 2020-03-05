@@ -299,7 +299,7 @@ def correlate_img_to_ref_q4(node_coordss, mesh, img, ref, settings):
             logging.info('Converged in %s iterations'%it)
             return node_coords,Ic,True
 
-    logging.info('Did not converged in %s iterations last increment was %0.4f' % (it,np.max(dnod)))
+    logging.info('Did not converged in %s iterations last increment was %0.4f' % (it,np.max(np.abs(dnod))))
     return node_coords, Ic, False
 
     # Calculate correlation factor for this element
