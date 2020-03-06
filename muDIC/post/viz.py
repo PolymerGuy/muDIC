@@ -422,7 +422,7 @@ class Visualizer(object):
             # for i in range(fvar.shape[0]):
             # print(xs.shape,ys.shape,fvar.shape)
 
-            plt.contourf(xs, ys, fvar, 50, alpha=0.8,**kwargs)
+            plt.contourf(xs, ys, fvar, 50, **kwargs)
             # else:
 
 
