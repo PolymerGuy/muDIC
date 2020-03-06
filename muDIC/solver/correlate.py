@@ -10,6 +10,7 @@ from .reference import generate_reference
 from .reference_q4 import generate_reference_Q4, find_elm_borders_mesh, normalized_zero_mean
 from ..IO.image_stack import ImageStack
 from ..elements.fieldInterpolator import FieldInterpolator
+from ..elements.b_splines import BSplineSurface
 from ..elements.q4 import Q4
 from ..mesh.meshUtilities import Mesh
 from ..utils import convert_to_img_frame, find_element_borders
@@ -138,7 +139,7 @@ def store_stripped_copy(reference_generator, storage):
     return wrapper
 
 
-def correlate(inputs):
+def correlate(inputs, correlator, reference_gen):
     """
    Main correlation routine
     This routine manages result storage, reference generation and
@@ -169,9 +170,9 @@ def correlate(inputs):
     node_position_t = list()
 
     if settings.store_internals:
-        gen_ref = store_stripped_copy(generate_reference, storage=reference_stack)
+        gen_ref = store_stripped_copy(reference_gen, storage=reference_stack)
     else:
-        gen_ref = generate_reference
+        gen_ref = reference_gen
 
     if settings.node_hist:
         node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, 0]
@@ -185,7 +186,7 @@ def correlate(inputs):
     # Correlate the image frames
 
     try:
-        for image_id in range(1,settings.max_nr_im-1):
+        for image_id in range(1, settings.max_nr_im):
             logger.info('Processing frame nr: %i', image_id)
 
             if settings.node_hist:
@@ -201,7 +202,7 @@ def correlate(inputs):
             img = images[image_id]
 
             try:
-                node_coords, Ic, conv = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
+                node_coords, Ic, conv = correlator(node_coords, mesh, img, reference, settings)
 
                 if not conv:
                     # Handle the convergence issue
@@ -209,7 +210,7 @@ def correlate(inputs):
                         pass
                     elif settings.noconvergence == "update":
                         reference = gen_ref(node_coords, mesh, images[image_id - 1], settings, image_id - 1)
-                        node_coords, Ic, conv = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
+                        node_coords, Ic, conv = correlator(node_coords, mesh, img, reference, settings)
                         if not conv:
                             break
                     elif settings.noconvergence == "break":
@@ -230,7 +231,6 @@ def correlate(inputs):
         return np.array(node_position_t), reference_stack, Ic_stacks
 
 
-
 def correlate_img_to_ref_q4(node_coordss, mesh, img, ref, settings):
     # Instantiate empty arrays
 
@@ -247,7 +247,6 @@ def correlate_img_to_ref_q4(node_coordss, mesh, img, ref, settings):
     di = np.zeros(n_nodes_elm * 2, dtype=np.float64)
     dnod = np.zeros(n_nodes * 2, dtype=np.float64)
     C = np.zeros(n_nodes * 2, dtype=np.float64)
-
 
     # Find borders of the elements
     borders = find_elm_borders_mesh(node_coords, settings.mesh, settings.mesh.n_elms)
@@ -296,111 +295,13 @@ def correlate_img_to_ref_q4(node_coordss, mesh, img, ref, settings):
 
         # Check for convergence
         if np.max(np.abs(dnod)) < settings.tol:
-            logging.info('Converged in %s iterations'%it)
-            return node_coords,Ic,True
+            logging.info('Converged in %s iterations' % it)
+            return node_coords, Ic, True
 
-    logging.info('Did not converged in %s iterations last increment was %0.4f' % (it,np.max(np.abs(dnod))))
+    logging.info('Did not converged in %s iterations last increment was %0.4f' % (it, np.max(np.abs(dnod))))
     return node_coords, Ic, False
 
     # Calculate correlation factor for this element
-
-
-
-def correlate_q4(inputs):
-    """
-   Main correlation routine
-    This routine manages result storage, reference generation and
-     the necessary logic for handling convergence issues.
-
-   Parameters
-   ----------
-   inputs : DIC_input object
-       The input object containing all necessary data for performing a DIC analysis.
-
-   Returns
-   -------
-   node_coords, reference_stack, Ic_stacks
-    """
-
-    logger = logging.getLogger(__name__)
-
-    mesh = inputs.mesh
-    images = inputs.images
-    settings = inputs
-
-    # Do the initial setup
-
-    images.image_reader.precision = settings.precision
-
-    Ic_stacks = list()
-    reference_stack = list()
-    node_position_t = list()
-
-
-
-    if settings.store_internals:
-        gen_ref = store_stripped_copy(generate_reference_Q4, storage=reference_stack)
-    else:
-        gen_ref = generate_reference_Q4
-
-    if settings.node_hist:
-        node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, 0]
-    else:
-        node_coords = np.array((mesh.xnodes, mesh.ynodes), dtype=settings.precision)
-
-    node_position_t.append(node_coords)
-
-
-    reference = gen_ref(node_coords, mesh, images[0], settings, image_id=0)
-
-    # Correlate the image frames
-
-    try:
-        for image_id in range(1,settings.max_nr_im):
-            logger.info('Processing frame nr: %i', image_id)
-
-            if settings.node_hist:
-                if len(settings.node_hist) >= image_id:
-                    logger.info("Using initial conditions")
-                    node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, image_id]
-                else:
-                    pass
-            if image_id in settings.ref_update:
-                logger.info('Updating reference at %i', image_id)
-                reference = gen_ref(node_coords, mesh, images[image_id - 1], settings, image_id=(image_id - 1))
-
-            img = images[image_id]
-
-            try:
-                node_coords, Ic, conv = correlate_img_to_ref_q4(node_coords, mesh, img, reference, settings)
-
-                if not conv:
-                    # Handle the convergence issue
-                    if settings.noconvergence == "ignore":
-                        pass
-                    elif settings.noconvergence == "update":
-                        reference = gen_ref(node_coords, mesh, images[image_id - 1], settings, image_id - 1)
-                        node_coords, Ic, conv = correlate_img_to_ref_q4(node_coords, mesh, img, reference, settings)
-                        if not conv:
-                            break
-                    elif settings.noconvergence == "break":
-                        break
-
-
-
-            except Exception as e:
-                logger.exception(e)
-                pass
-
-            if settings.store_internals:
-                Ic_stacks.append(Ic)
-
-            node_position_t.append(node_coords)
-
-    finally:
-        return np.array(node_position_t), reference_stack, Ic_stacks
-
-
 
 
 
@@ -478,10 +379,13 @@ class DICAnalysis(object):
 
     def __solve__(self):
         # TODO: Explicitly check that element fomulation
-        if self.__input__.mesh.n_elms == 1:
-            node_position, reference_stack, Ic_Stack = correlate(self.__input__)
+        if isinstance(self.__input__.mesh.element_def,BSplineSurface):
+            node_position, reference_stack, Ic_Stack = correlate(self.__input__, correlate_img_to_ref,
+                                                                 generate_reference)
+
         else:
-            node_position, reference_stack, Ic_Stack = correlate_q4(self.__input__)
+            node_position, reference_stack, Ic_Stack = correlate(self.__input__, correlate_img_to_ref_q4,
+                                                                 generate_reference_Q4)
 
         # TODO: Remove the need of transposing the matrices
         return node_position[:, 0, :].transpose(), node_position[:, 1,
@@ -509,9 +413,9 @@ class DICAnalysis(object):
         else:
             inputs_checked.max_nr_im = len(inputs_checked.images)
 
-        if not isinstance(inputs_checked.mesh.element_def, FieldInterpolator) and not isinstance(
+        if not isinstance(inputs_checked.mesh.element_def, BSplineSurface) and not isinstance(
                 inputs_checked.mesh.element_def, Q4):
-            raise TypeError('Finite element should be an instance of FieldInterpolator')
+            raise TypeError('Finite element should be Bsplinesurface or Q4')
         inputs_checked.elm = inputs_checked.mesh.element_def
 
         if not isinstance(inputs_checked.ref_update, (list, tuple)):
