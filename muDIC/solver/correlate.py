@@ -9,14 +9,13 @@ import scipy.ndimage as nd
 from .reference import generate_reference
 from .reference_q4 import generate_reference_Q4, find_elm_borders_mesh, normalized_zero_mean
 from ..IO.image_stack import ImageStack
-from ..elements.fieldInterpolator import FieldInterpolator
 from ..elements.b_splines import BSplineSurface
 from ..elements.q4 import Q4
 from ..mesh.meshUtilities import Mesh
 from ..utils import convert_to_img_frame, find_element_borders
 
 
-def correlate_img_to_ref(node_pos, mesh, img, ref, settings):
+def correlate_img_to_ref_spline(node_pos, img, ref, settings):
     """
    Correlate an image to a reference
     The routine identifies the part of the image covered by the mesh and
@@ -43,11 +42,11 @@ def correlate_img_to_ref(node_pos, mesh, img, ref, settings):
    The function extracts a rectangular region of the image covered by the element, which may be very large
    if the mesh is tilted. This would reduce the performance of the routine
     """
-    element_borders = find_element_borders(node_pos, mesh)
+    element_borders = find_element_borders(node_pos, settings.mesh)
 
-    image_frame, node_pos_img_coords = convert_to_img_frame(img, node_pos, mesh, element_borders, settings)
+    image_frame, node_pos_img_coords = convert_to_img_frame(img, node_pos, settings.mesh, element_borders, settings)
 
-    node_position_increment, Ic, conv = correlate_frames(node_pos_img_coords, mesh, image_frame, ref, settings)
+    node_position_increment, Ic, conv = correlate_frames(node_pos_img_coords, settings.mesh, image_frame, ref, settings)
 
     node_position_new = node_pos + node_position_increment
     return node_position_new, Ic, conv
@@ -202,18 +201,21 @@ def correlate(inputs, correlator, reference_gen):
             img = images[image_id]
 
             try:
-                node_coords, Ic, conv = correlator(node_coords, mesh, img, reference, settings)
+                node_coords, Ic, conv = correlator(node_coords, img, reference, settings)
 
                 if not conv:
                     # Handle the convergence issue
                     if settings.noconvergence == "ignore":
                         pass
                     elif settings.noconvergence == "update":
+                        logger.info("Updating reference due to lack of convergence.")
                         reference = gen_ref(node_coords, mesh, images[image_id - 1], settings, image_id - 1)
-                        node_coords, Ic, conv = correlator(node_coords, mesh, img, reference, settings)
+                        node_coords, Ic, conv = correlator(node_coords, img, reference, settings)
                         if not conv:
+                            logger.info("Updating reference did not fix convergence issues, aborting...")
                             break
                     elif settings.noconvergence == "break":
+                        logger.info("Aborting due to convergence issues.")
                         break
 
 
@@ -231,7 +233,7 @@ def correlate(inputs, correlator, reference_gen):
         return np.array(node_position_t), reference_stack, Ic_stacks
 
 
-def correlate_img_to_ref_q4(node_coordss, mesh, img, ref, settings):
+def correlate_img_to_ref_q4(node_coordss, img, ref, settings):
     # Instantiate empty arrays
 
     node_coords = node_coordss.copy()
@@ -302,7 +304,6 @@ def correlate_img_to_ref_q4(node_coordss, mesh, img, ref, settings):
     return node_coords, Ic, False
 
     # Calculate correlation factor for this element
-
 
 
 class DICAnalysis(object):
@@ -379,8 +380,8 @@ class DICAnalysis(object):
 
     def __solve__(self):
         # TODO: Explicitly check that element fomulation
-        if isinstance(self.__input__.mesh.element_def,BSplineSurface):
-            node_position, reference_stack, Ic_Stack = correlate(self.__input__, correlate_img_to_ref,
+        if isinstance(self.__input__.mesh.element_def, BSplineSurface):
+            node_position, reference_stack, Ic_Stack = correlate(self.__input__, correlate_img_to_ref_spline,
                                                                  generate_reference)
 
         else:
