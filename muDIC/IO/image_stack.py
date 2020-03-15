@@ -70,7 +70,7 @@ class ImageStack(object):
         self._filter_ = partial(filter, **kwargs)
 
     def __getitem__(self, index):
-        return self._filter_(self.image_reader(self._active_img_ids_[index]))
+        return np.array(self._filter_(self.image_reader(self._active_img_ids_[index])))
 
     def revere_order(self):
         """
