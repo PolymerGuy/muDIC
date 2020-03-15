@@ -127,7 +127,7 @@ class ImageDeformer(object):
         n, m = np.shape(img)
         def_imgs = []
 
-        xn, yn = np.meshgrid(np.arange(n), np.arange(m))
+        xn, yn = np.meshgrid(np.arange(m), np.arange(n))
         xn_mapped, yn_mapped = xn, yn
 
         for i in range(steps):
