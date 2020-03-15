@@ -396,7 +396,7 @@ class Visualizer(object):
             fvar = self.fields.true_strain()[0, component[0], component[1], :, :, frame]
             xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
-        if keyword in ("F","degrad","deformationgradient"):
+        elif keyword in ("F","degrad","deformationgradient"):
             fvar = self.fields.F()[0, component[0], component[1], :, :, frame]
             xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
