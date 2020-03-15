@@ -28,6 +28,8 @@ class Fields(object):
             The results from the DIC analysis
         seed : Integer
             The number of grid points which will be evaluated in each direction
+        upscale : Float
+            Return values on a grid upscale times fines than the original mesh
 
         Returns
         -------
@@ -37,8 +39,6 @@ class Fields(object):
         self.logger = logging.getLogger()
 
 
-
-
         # The type is implicitly checked by using the interface
         self.__res__ = dic_results
         self.__settings__ = dic_results.settings
@@ -46,15 +46,14 @@ class Fields(object):
 
         if isinstance(self.__settings__.mesh.element_def,Q4):
             q4 = True
+            seed = 1
+            self.logger.info("Post processing results from Q4 elements. The seed variable is ignored and the values "
+                             "are extracted at the element centers. Use the upscale value to get interpolated fields.")
         else:
             q4 = False
-
-        # TODO: Remove hacking below
-        if q4:
-            # Use only the centroid
-            seed = 1
-
-
+            self.logger.info("Post processing results from B-spline elements. The upscale variable is ignored. Use "
+                             "the seed varialbe to set the number of gridpoints to be evaluated along each element "
+                             "axis.")
 
 
         self.__ee__, self.__nn__ = self.__generate_grid__(seed)
@@ -65,29 +64,40 @@ class Fields(object):
                                                                   self.__settings__.mesh.element_def, self.__nn__,
                                                                   self.__ee__)
 
+        # To make the result formatting consistent across element formulations, we arrange the elements onto a grid
+        # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
+        # by using 3rd order spline interpolation.
+
         if q4:
             # Flatten things form multiple elements to a grid of elements
             grid_shape = (self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx)
-            n_times = self.__F__.shape[-1]
+            n_frames = self.__F__.shape[-1]
             self.__F2__ = np.zeros(
                 (1, 2, 2, self.__settings__.mesh.n_elx, self.__settings__.mesh.n_ely, self.__F__.shape[-1]))
             for i in range(2):
                 for j in range(2):
-                    for t in range(n_times):
+                    for t in range(n_frames):
                         self.__F2__[0, i, j, :, :, t] = self.__F__[:, i, j, 0, 0, t].reshape(grid_shape).transpose()
 
             self.__coords2__ = np.zeros(
                 (1, 2, self.__settings__.mesh.n_elx, self.__settings__.mesh.n_ely, self.__F__.shape[-1]))
             for i in range(2):
-                for t in range(n_times):
+                for t in range(n_frames):
                     self.__coords2__[0, i, :, :, t] = self.__coords__[:, i, 0, 0, t].reshape(grid_shape).transpose()
+
+
+            # Overwrite the old results
+            # TODO: Remove overwriting results as this is a painfully non-functional thing to do...
+            self.__coords__ = self.__coords2__
+            self.__F__ = self.__F2__
 
             self.__coords__ = self.__coords2__
             self.__F__ = self.__F2__
 
 
 
-            if Q4 and upscale != 1.:
+
+            if upscale != 1.:
                 elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, self.__settings__.mesh.n_elx - 1, 1./upscale),
                                                        np.arange(0, self.__settings__.mesh.n_ely - 1, 1./upscale))
 
@@ -101,14 +111,14 @@ class Fields(object):
 
 
                 for i in range(2):
-                    for t in range(n_times):
-                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords2__[0, i, :, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape).transpose()
+                    for t in range(n_frames):
+                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords__[0, i, :, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape).transpose()
 
 
                 for i in range(2):
                     for j in range(2):
-                        for t in range(n_times):
-                            self.__F3__[0, i,j, :, :, t] = map_coordinates(self.__F2__[0, i, j,:, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape).transpose()
+                        for t in range(n_frames):
+                            self.__F3__[0, i,j, :, :, t] = map_coordinates(self.__F__[0, i, j,:, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape).transpose()
 
 
                 self.__coords__ = self.__coords3__
@@ -126,16 +136,12 @@ class Fields(object):
         else:
 
             if np.ndim(seed)==1:
-
-                #return np.meshgrid(np.arange(0., 1. + self.__incx__, self.__incx__),
-                #                   np.arange(0., 1. + self.__incy__, self.__incy__))
                 return np.meshgrid(np.linspace(0., 1., seed[0]),
                                    np.linspace(0., 1., seed[1]))
 
             else:
-                self.__inc__ = 1. / (float(seed) - 1.)
-                return np.meshgrid(np.arange(0., 1. + self.__inc__, self.__inc__),
-                                   np.arange(0., 1. + self.__inc__, self.__inc__))
+                return np.meshgrid(np.linspace(0., 1., seed),
+                                   np.linspace(0., 1., seed))
 
     @staticmethod
     def _deformation_gradient_(xnodesT, ynodesT, msh, elm, e, n):
@@ -386,6 +392,10 @@ class Visualizer(object):
 
         if keyword == "truestrain":
             fvar = self.fields.true_strain()[0, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
+
+        if keyword in ("F","degrad","deformationgradient"):
+            fvar = self.fields.F()[0, component[0], component[1], :, :, frame]
             xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
         elif keyword == "engstrain":
