@@ -19,8 +19,8 @@ def mesh_translator(org_mesh, target_mesh, dic_results):
 
     # TODO: Add Q4 support
 
-    if not isinstance(org_mesh.element_def,BSplineSurface) or not isinstance(target_mesh.element_def,BSplineSurface):
-        raise NotImplementedError("Only B-spline elements are currently supported")
+    if not isinstance(org_mesh.element_def,BSplineSurface):
+        raise NotImplementedError("Only B-spline elements are supported as original mesh")
 
     print("The mesh translator is in Beta and may yield invalid results!")
 
