@@ -328,6 +328,8 @@ class Fields(object):
     def residual(self, frame_id):
         if self.__settings__.store_internals == False:
             raise ValueError("The analysis has to be run with store_internals=True")
+        if isinstance(self.__settings__.mesh.element_def,Q4):
+            raise NotImplementedError("Q4 residual fields are not yet implemented")
         ref_id = ind_closest_below(frame_id, [ref.image_id for ref in self.__res__.reference])
         ref = self.__res__.reference[ref_id]
 
