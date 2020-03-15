@@ -429,18 +429,10 @@ class Visualizer(object):
             if self.images:
                 n, m = self.images[frame].shape
                 plt.imshow(self.images[frame], cmap=plt.cm.gray, origin="lower", extent=(0, m, 0, n))
-                # plt.imshow(self.images[frame], cmap=plt.cm.gray)
-
-            # for i in range(fvar.shape[0]):
-            # print(xs.shape,ys.shape,fvar.shape)
 
             plt.contourf(xs, ys, fvar, 50, **kwargs)
-            # else:
-
 
         plt.colorbar()
-        #plt.clim(vmin=vmin, vmax=vmax)
-
         plt.show()
 
 
