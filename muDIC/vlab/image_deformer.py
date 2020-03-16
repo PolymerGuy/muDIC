@@ -26,7 +26,7 @@ def num_diff(xs, ys, func, component=(1, 1)):
         raise ValueError("Incompatible component request")
 
 
-def inverse(xs, ys, function, tol=1e-6):
+def inverse(xs, ys, function, tol=1e-6,frame=1):
     """Calculates the inverse of a displacement function
 
     Returns the arguments corresponding to the function values given.
@@ -55,14 +55,12 @@ def inverse(xs, ys, function, tol=1e-6):
     """
     logger = logging.getLogger()
 
-    n_coords = xs.shape
-
     def f_x(x, y, a_x):
-        u_x, _ = function(x, y, img_shape=n_coords)
+        u_x, _ = function(x, y,frame=frame)
         return x + u_x - a_x
 
     def f_y(y, x, a_y):
-        _, u_y = function(x, y, img_shape=n_coords)
+        _, u_y = function(x, y,frame=frame)
         return y + u_y - a_y
 
     x_deformed = xs.flatten()
@@ -71,8 +69,8 @@ def inverse(xs, ys, function, tol=1e-6):
     y_deformed = ys.flatten()
     y_undeformed_guess = y_deformed.copy()
 
-    x = optimize.newton(f_x, x_undeformed_guess, args=(y_undeformed_guess, x_deformed,))
-    y = optimize.newton(f_y, y_undeformed_guess, args=(x_undeformed_guess, y_deformed,))
+    x = optimize.newton(f_x, x_undeformed_guess, args=(y_undeformed_guess, x_deformed))
+    y = optimize.newton(f_y, y_undeformed_guess, args=(x_undeformed_guess, y_deformed))
 
     error_x = np.max(np.abs(f_x(np.array(x), y_undeformed_guess, x_deformed)))
     error_y = np.max(np.abs(f_y(np.array(y), x_undeformed_guess, y_deformed)))
@@ -127,8 +125,13 @@ class ImageDeformer(object):
         n, m = np.shape(img)
         def_imgs = []
 
+
         xn, yn = np.meshgrid(np.arange(m), np.arange(n))
         xn_mapped, yn_mapped = xn, yn
+        disp_increment_x, disp_increment_y = self.coodinate_mapper(xn, yn)
+        disp_increment_x = disp_increment_x - xn
+        disp_increment_y = disp_increment_y - yn
+
 
         for i in range(steps):
             if i == 0:
@@ -137,11 +140,10 @@ class ImageDeformer(object):
                 if self.multiplicative:
                     xn_mapped, yn_mapped = self.coodinate_mapper(xn_mapped, yn_mapped)
                 else:
-                    xn_mapped, yn_mapped = self.coodinate_mapper(xn, yn)
-                    xn_mapped, yn_mapped = float(i) * (xn_mapped - xn) + xn, float(i) * (
-                                yn_mapped - yn) + yn
+                    xn_mapped, yn_mapped = self.coodinate_mapper(xn, yn,frame=i)
+                    #xn_mapped, yn_mapped = float(i) * disp_increment_x + xn, float(i) * disp_increment_y + yn
 
-                Ic = nd.map_coordinates(img, np.array([yn_mapped, xn_mapped]), order=self.order, prefilter=True, cval=0)
+                Ic = nd.map_coordinates(img, np.array([yn_mapped, xn_mapped]), order=self.order, cval=0)
 
             def_imgs.append(Ic)
 
