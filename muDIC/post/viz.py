@@ -9,7 +9,7 @@ from muDIC.elements.q4 import Q4
 
 class Fields(object):
     # TODO: Remove Q4 argument. This should be detected automaticaly
-    def __init__(self, dic_results, seed=21,upscale=1):
+    def __init__(self, dic_results, seed=21,upscale=1,interpolation_order=1):
         """
         Fields calculates field variables from the DIC-results.
         The implementation is lazy, hence getter methods have to be used.
@@ -42,6 +42,7 @@ class Fields(object):
         # The type is implicitly checked by using the interface
         self.__res__ = dic_results
         self.__settings__ = dic_results.settings
+        self.interpolation_order = interpolation_order
 
 
         if isinstance(self.__settings__.mesh.element_def,Q4):
@@ -112,13 +113,13 @@ class Fields(object):
 
                 for i in range(2):
                     for t in range(n_frames):
-                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords__[0, i, :, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape).transpose()
+                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords__[0, i, :, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=self.interpolation_order).reshape(elms_x_fine.shape).transpose()
 
 
                 for i in range(2):
                     for j in range(2):
                         for t in range(n_frames):
-                            self.__F3__[0, i,j, :, :, t] = map_coordinates(self.__F__[0, i, j,:, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=3).reshape(elms_x_fine.shape).transpose()
+                            self.__F3__[0, i,j, :, :, t] = map_coordinates(self.__F__[0, i, j,:, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=self.interpolation_order).reshape(elms_x_fine.shape).transpose()
 
 
                 self.__coords__ = self.__coords3__
