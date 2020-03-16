@@ -186,6 +186,6 @@ class Downsampler(object):
         if image.shape[0] != self.dim_m or image.shape[1] != self.dim_n:
             raise ValueError("Invalid shape")
 
-        downsampled_image_bins = ndimage.map_coordinates(image, self.coordinates, order=3, prefilter=True, cval=np.nan)
+        downsampled_image_bins = ndimage.map_coordinates(image, self.coordinates, order=3, prefilter=True, cval=0.0)
 
         return np.mean(downsampled_image_bins, axis=(2, 3))
