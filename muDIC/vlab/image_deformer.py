@@ -128,10 +128,6 @@ class ImageDeformer(object):
 
         xn, yn = np.meshgrid(np.arange(m), np.arange(n))
         xn_mapped, yn_mapped = xn, yn
-        disp_increment_x, disp_increment_y = self.coodinate_mapper(xn, yn)
-        disp_increment_x = disp_increment_x - xn
-        disp_increment_y = disp_increment_y - yn
-
 
         for i in range(steps):
             if i == 0:
@@ -141,7 +137,6 @@ class ImageDeformer(object):
                     xn_mapped, yn_mapped = self.coodinate_mapper(xn_mapped, yn_mapped)
                 else:
                     xn_mapped, yn_mapped = self.coodinate_mapper(xn, yn,frame=i)
-                    #xn_mapped, yn_mapped = float(i) * disp_increment_x + xn, float(i) * disp_increment_y + yn
 
                 Ic = nd.map_coordinates(img, np.array([yn_mapped, xn_mapped]), order=self.order, cval=0)
 
