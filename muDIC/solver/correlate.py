@@ -6,15 +6,16 @@ from copy import copy
 import numpy as np
 import scipy.ndimage as nd
 
-from .reference import generate_reference as generate_reference
+from .reference import generate_reference
+from .reference_q4 import generate_reference_Q4, find_elm_borders_mesh, normalized_zero_mean
 from ..IO.image_stack import ImageStack
-from ..elements.fieldInterpolator import FieldInterpolator
+from ..elements.b_splines import BSplineSurface
+from ..elements.q4 import Q4
 from ..mesh.meshUtilities import Mesh
-from ..solver.custom_exceptions import DidNotConverge
 from ..utils import convert_to_img_frame, find_element_borders
 
 
-def correlate_img_to_ref(node_pos, mesh, img, ref, settings):
+def correlate_img_to_ref_spline(node_pos, img, ref, settings):
     """
    Correlate an image to a reference
     The routine identifies the part of the image covered by the mesh and
@@ -41,11 +42,12 @@ def correlate_img_to_ref(node_pos, mesh, img, ref, settings):
    The function extracts a rectangular region of the image covered by the element, which may be very large
    if the mesh is tilted. This would reduce the performance of the routine
     """
-    element_borders = find_element_borders(node_pos, mesh)
 
-    image_frame, node_pos_img_coords = convert_to_img_frame(img, node_pos, mesh, element_borders, settings)
+    element_borders = find_element_borders(node_pos, settings.mesh)
 
-    node_position_increment, Ic, conv = correlate_frames(node_pos_img_coords, mesh, image_frame, ref, settings)
+    image_frame, node_pos_img_coords = convert_to_img_frame(img, node_pos, settings.mesh, element_borders, settings)
+
+    node_position_increment, Ic, conv = correlate_frames(node_pos_img_coords, settings.mesh, image_frame, ref, settings)
 
     node_position_new = node_pos + node_position_increment
     return node_position_new, Ic, conv
@@ -78,7 +80,7 @@ def correlate_frames(node_pos, mesh, img, ref, settings):
     pixel_pos = np.zeros((2, ref.n_pixels), dtype=settings.precision)
     dnod_x = np.zeros(mesh.n_nodes * 2)
 
-    image_filtered = nd.spline_filter(img, order=3).transpose()
+    image_filtered = nd.spline_filter(img, order=settings.interpolation_order).transpose()
 
     for it in range(settings.maxit):
 
@@ -103,8 +105,8 @@ def correlate_frames(node_pos, mesh, img, ref, settings):
             return np.array((dnod_x[:mesh.n_nodes], dnod_x[mesh.n_nodes:])), Ic, True
 
         # Reset array values
-    logger.info("Frame did not converge. Largest increment was %f pixels"%np.max(dnod))
-    return np.array((dnod_x[:mesh.n_nodes], dnod_x[mesh.n_nodes:])), Ic,False
+    logger.info("Frame did not converge. Largest increment was %f pixels" % np.max(dnod))
+    return np.array((dnod_x[:mesh.n_nodes], dnod_x[mesh.n_nodes:])), Ic, False
 
 
 def store_stripped_copy(reference_generator, storage):
@@ -137,7 +139,7 @@ def store_stripped_copy(reference_generator, storage):
     return wrapper
 
 
-def correlate(inputs):
+def correlate(inputs, correlator, reference_gen):
     """
    Main correlation routine
     This routine manages result storage, reference generation and
@@ -168,25 +170,27 @@ def correlate(inputs):
     node_position_t = list()
 
     if settings.store_internals:
-        gen_ref = store_stripped_copy(generate_reference, storage=reference_stack)
+        gen_ref = store_stripped_copy(reference_gen, storage=reference_stack)
     else:
-        gen_ref = generate_reference
+        gen_ref = reference_gen
 
     if settings.node_hist:
         node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, 0]
     else:
         node_coords = np.array((mesh.xnodes, mesh.ynodes), dtype=settings.precision)
 
+    node_position_t.append(node_coords)
+
     reference = gen_ref(node_coords, mesh, images[0], settings, image_id=0)
 
     # Correlate the image frames
 
     try:
-        for image_id in range(settings.max_nr_im):
+        for image_id in range(1, settings.max_nr_im):
             logger.info('Processing frame nr: %i', image_id)
 
             if settings.node_hist:
-                if len(settings.node_hist)>=image_id:
+                if len(settings.node_hist) >= image_id:
                     logger.info("Using initial conditions")
                     node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, image_id]
                 else:
@@ -198,18 +202,21 @@ def correlate(inputs):
             img = images[image_id]
 
             try:
-                node_coords, Ic, conv = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
+                node_coords, Ic, conv = correlator(node_coords, img, reference, settings)
 
                 if not conv:
                     # Handle the convergence issue
                     if settings.noconvergence == "ignore":
                         pass
                     elif settings.noconvergence == "update":
+                        logger.info("Updating reference due to lack of convergence.")
                         reference = gen_ref(node_coords, mesh, images[image_id - 1], settings, image_id - 1)
-                        node_coords, Ic,conv = correlate_img_to_ref(node_coords, mesh, img, reference, settings)
+                        node_coords, Ic, conv = correlator(node_coords, img, reference, settings)
                         if not conv:
+                            logger.info("Updating reference did not fix convergence issues, aborting...")
                             break
                     elif settings.noconvergence == "break":
+                        logger.info("Aborting due to convergence issues.")
                         break
 
 
@@ -225,6 +232,79 @@ def correlate(inputs):
 
     finally:
         return np.array(node_position_t), reference_stack, Ic_stacks
+
+
+def correlate_img_to_ref_q4(node_coordss, img, ref, settings):
+    # Instantiate empty arrays
+
+    node_coords = node_coordss.copy()
+
+    img = nd.spline_filter(img, order=settings.interpolation_order)
+
+    pix_cord_local = [np.zeros((2, ref.Nref_stack[elm_nr].shape[0]), dtype=np.float64) for elm_nr in
+                      range(settings.mesh.n_elms)]
+
+    n_nodes = settings.mesh.n_nodes
+    n_nodes_elm = settings.mesh.element_def.n_nodes
+
+    di = np.zeros(n_nodes_elm * 2, dtype=np.float64)
+    dnod = np.zeros(n_nodes * 2, dtype=np.float64)
+    C = np.zeros(n_nodes * 2, dtype=np.float64)
+
+    # Find borders of the elements
+    borders = find_elm_borders_mesh(node_coords, settings.mesh, settings.mesh.n_elms)
+
+    # Extract image within element borders with padding
+    img_frames = [img[borders[2, el].astype(int) - settings.pad:borders[3, el].astype(int) + settings.pad,
+                  borders[0, el].astype(int) - settings.pad:borders[1, el].astype(int) + settings.pad] for el in
+                  range(settings.mesh.n_elms)]
+
+    # Normalize image frame flux
+    if False:
+        img_frames = map(normalized_zero_mean, img_frames)
+
+    # Element loop
+    # TODO: This implementation does handle errors very pretty...
+    for it in range(settings.maxit):
+        C[:] = 0.0
+
+        for el in range(settings.mesh.n_elms):
+            Ic = np.zeros_like(ref.I0_stack[el], dtype=np.float64)
+            # Find current coordinates element within the elm_frame
+            np.dot(ref.Nref_stack[el], node_coords[0, settings.mesh.ele[:, el]] - borders[0, el] + settings.pad,
+                   out=pix_cord_local[el][1])
+            np.dot(ref.Nref_stack[el], node_coords[1, settings.mesh.ele[:, el]] - borders[2, el] + settings.pad,
+                   out=pix_cord_local[el][0])
+
+            # Determine greyscale value at XYc
+            nd.map_coordinates(img_frames[el],
+                               pix_cord_local[el], order=settings.interpolation_order, prefilter=False,
+                               output=Ic)
+
+            # Calculate B^T * dIK
+            np.dot(ref.B_stack[el], (ref.I0_stack[el] - Ic), out=di)
+
+            # TODO: This shape is awkvard
+            # Order di to match format of K
+            C[(settings.mesh.ele[:, el] + 1) * 2 - 2] += di[:settings.elm.n_nodes]
+            C[(settings.mesh.ele[:, el] + 1) * 2 - 1] += di[settings.elm.n_nodes:]
+
+        # Calculate position increment as (B^T B)^-1 * (B^T*dIk) "Least squares solution"
+        np.dot(ref.K, C, out=dnod)
+
+        # Add increment to nodal positions
+        node_coords[0, :] += dnod[::2]
+        node_coords[1, :] += dnod[1::2]
+
+        # Check for convergence
+        if np.max(np.abs(dnod)) < settings.tol:
+            logging.info('Converged in %s iterations' % it)
+            return node_coords, Ic, True
+
+    logging.info('Did not converged in %s iterations last increment was %0.4f' % (it, np.max(np.abs(dnod))))
+    return node_coords, Ic, False
+
+    # Calculate correlation factor for this element
 
 
 class DICAnalysis(object):
@@ -300,7 +380,15 @@ class DICAnalysis(object):
         return self.__input__
 
     def __solve__(self):
-        node_position, reference_stack, Ic_Stack = correlate(self.__input__)
+        # TODO: Explicitly check that element fomulation
+        if isinstance(self.__input__.mesh.element_def, BSplineSurface):
+            node_position, reference_stack, Ic_Stack = correlate(self.__input__, correlate_img_to_ref_spline,
+                                                                 generate_reference)
+
+        else:
+            node_position, reference_stack, Ic_Stack = correlate(self.__input__, correlate_img_to_ref_q4,
+                                                                 generate_reference_Q4)
+
         # TODO: Remove the need of transposing the matrices
         return node_position[:, 0, :].transpose(), node_position[:, 1,
                                                    :].transpose(), reference_stack, Ic_Stack
@@ -327,8 +415,9 @@ class DICAnalysis(object):
         else:
             inputs_checked.max_nr_im = len(inputs_checked.images)
 
-        if not isinstance(inputs_checked.mesh.element_def, FieldInterpolator):
-            raise TypeError('Finite element should be an instance of Finite_Element')
+        if not isinstance(inputs_checked.mesh.element_def, BSplineSurface) and not isinstance(
+                inputs_checked.mesh.element_def, Q4):
+            raise TypeError('Finite element should be Bsplinesurface or Q4')
         inputs_checked.elm = inputs_checked.mesh.element_def
 
         if not isinstance(inputs_checked.ref_update, (list, tuple)):
@@ -340,7 +429,7 @@ class DICAnalysis(object):
         if type(inputs_checked.pad) is not int:
             raise TypeError('Padding width should be specified by an integer')
 
-        if not inputs_checked.noconvergence in ["ignore","update","break"]:
+        if not inputs_checked.noconvergence in ["ignore", "update", "break"]:
             raise ValueError("The action on no convergence is either ignore, update or break")
 
         return inputs_checked
@@ -349,7 +438,8 @@ class DICAnalysis(object):
 class DICInput(object):
 
     def __init__(self, mesh, image_stack, ref_update_frames=[50, 150], maxit=40, max_nr_im=None, pad=10,
-                 store_internals=False, node_hist=None, precision="double", interpolation_order=3, block_size=1e7,noconvergence="ignore"):
+                 store_internals=False, node_hist=None, precision="double", interpolation_order=3, block_size=1e7,
+                 noconvergence="ignore"):
 
         """
          DIC output container

@@ -52,7 +52,7 @@ class TestImageReader(TestCase):
             img_ids = [int((img.replace('file', '')).replace('.png', '')) for img in correct_images]
 
             # Check if all ids have a corresponding image
-            self.assertEquals(ids, img_ids)
+            self.assertEqual(ids, img_ids)
 
             # Remove some images and repeat
             self.images.skip_images([2, 7, 17, 92])
@@ -66,7 +66,7 @@ class TestImageReader(TestCase):
             self.images.skip_images(skipped_frames)
             ids = self.images._active_img_ids_
             img_ids = self.images._active_img_ids_  # [int((img.replace('file', '')).replace('.png', '')) for img in self.images._active_img_ids_]
-            self.assertEquals(ids, img_ids)
+            self.assertEqual(ids, img_ids)
 
         # Exception when index is out of bounds
         self.assertRaises(ValueError, self.images.skip_images, [101])

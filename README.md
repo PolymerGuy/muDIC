@@ -31,14 +31,23 @@ This toolkit includes the following:
     * Light weight visualization
 * Logging
  
- 
+## Release notes
+The following changes were done in version 0.2.0:
+* Added Q4 element support
+* Q4 elements are now the default
+* Removed uneccessary scaling when images are deformed using displacement functions
+* Added quiver plots for displacements
+* Python 2.7 is no longer supported
+* Removed Perlin noise support as the package is only available for Python 2.7
+* Various bug fixes (See commit history)
+
 
 
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 ### Prerequisites
-This toolkit is tested on Python 2.7x an 3.7 and need all dependencies listen in requirements.txt
+This toolkit is tested on Python 3.7 and need all dependencies listen in requirements.txt
 
 ### Installing
 
@@ -73,15 +82,11 @@ We recommend that you always use virtual environments, either by virtualenv or b
 
 Virtual env:
 ```
-$ python -m virtualenv env
+$ cd /path/to/muDIC
+$ python venv env
 $ source ./env/bin/activate #On Linux and Mac OS
 $ env\Scripts\activate.bat #On Windows
 $ pip install -r requirements.txt
-```
-
-You can now run the tests by:
-```
-$ nosetests muDIC
 ```
 
 ## Running the tests
@@ -95,12 +100,12 @@ $ nosetests muDIC #Note capital cases
 
 If you cloned the repo:
 ```
-$ cd /path/to/project/
+$ cd /path/to/muDIC/
 $ nosetests
 ```
 
 ## Documentation
-Documentation is hosted by: [https://mudic.readthedocs.io/en/latest/]
+Documentation is found here: [Read the docs](https://mudic.readthedocs.io/en/latest/)
 
 
 ## Our motivation
@@ -119,6 +124,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Citing this project
 This project is described in the following paper and citation is highly appreciated
+[µDIC: An open-source toolkit for digital image correlation](https://doi.org/10.1016/j.softx.2019.100391)
 
 
 

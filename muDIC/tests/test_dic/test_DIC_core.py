@@ -45,11 +45,15 @@ class TestFullDICCore(TestCase):
 
         # Initialize a mesh instance
         if isinstance(element, dic.elements.BSplineSurface):
-            mesher_tool = dic.mesh.Mesher(element.degree_e, element.degree_n)
+            mesher_tool = dic.mesh.Mesher(element.degree_e, element.degree_n,type="spline")
 
-            myMesh = mesher_tool.mesh(images_stack, x1, x2, y1, y2, n_elx, n_ely, GUI=False)
+        elif isinstance(element,dic.elements.Q4):
+            mesher_tool = dic.mesh.Mesher(type="Q4")
+
         else:
             raise TypeError("Invalid element received")
+
+        myMesh = mesher_tool.mesh(images_stack, x1, x2, y1, y2, n_elx, n_ely, GUI=False)
 
         # Generate mesh
 
@@ -71,7 +75,6 @@ class TestFullDICCore(TestCase):
         results = dic.Fields(dic_results, seed=21)
 
         max_error, mean_error = self.__calculate_DIC_error__(F, results.F())
-        print("stuff:", max_error, mean_error)
 
         return max_error <= rel_tol_F
 
@@ -163,10 +166,8 @@ class TestFullDICCore(TestCase):
 
     def test_deg1_rotation(self):
         element = dic.elements.BSplineSurface(deg_e=1, deg_n=1)
-
         theta = 0.01
         F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
-        # print F
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
@@ -240,6 +241,40 @@ class TestFullDICCore(TestCase):
 
     def test_deg3_simple_shear(self):
         element = dic.elements.BSplineSurface(deg_e=3, deg_n=3)
+        F = np.array([[1.00, .005], [0., 1.]], dtype=np.float64)
+
+        passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
+        self.assertEqual(passed, True)
+
+    def test_Q4_rotation(self):
+        element = dic.elements.Q4()
+        theta = 0.01
+        F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+
+        passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
+        self.assertEqual(passed, True)
+
+    def test_Q4_rotation_biaxial(self):
+        element = dic.elements.Q4()
+
+        theta = 0.01
+        F_rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+        F_biax = np.array([[1.001, 0.], [0., 0.999]], dtype=np.float64)
+        F = np.dot(F_rot, F_biax)
+        # print F
+
+        passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
+        self.assertEqual(passed, True)
+
+    def test_Q4_biaxial(self):
+        element = dic.elements.Q4()
+        F = np.array([[1.001, 0.], [0., 0.999]], dtype=np.float64)
+
+        passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
+        self.assertEqual(passed, True)
+
+    def test_Q4_simple_shear(self):
+        element = dic.elements.Q4()
         F = np.array([[1.00, .005], [0., 1.]], dtype=np.float64)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)

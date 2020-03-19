@@ -1,3 +1,9 @@
+# This allows for running the example when the repo has been cloned
+import sys
+from os.path import abspath
+sys.path.extend([abspath(".")])
+
+# Example code follows
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
@@ -46,7 +52,7 @@ image_generator = vlab.SyntheticImageGenerator(speckle_image=speckle_image, imag
 image_stack = dic.ImageStack(image_generator)
 
 # Now, make a mesh. Make sure to use enough elements
-mesher = dic.Mesher(deg_n=3, deg_e=3)
+mesher = dic.Mesher(deg_n=3, deg_e=3,type="spline")
 #mesh = mesher.mesh(image_stack) # Use this if you want to use a GUI
 mesh = mesher.mesh(image_stack,Xc1=50,Xc2=450,Yc1=50,Yc2=450,n_ely=8,n_elx=8, GUI=False)
 
@@ -54,12 +60,13 @@ mesh = mesher.mesh(image_stack,Xc1=50,Xc2=450,Yc1=50,Yc2=450,n_ely=8,n_elx=8, GU
 # Prepare the analysis input and initiate the analysis
 input = dic.DICInput(mesh, image_stack)
 input.tol = 1e-6
+input.interpolation_order = 4
 
 dic_job = dic.DICAnalysis(input)
 results = dic_job.run()
 
-# Calculate the fields for later use
-fields = dic.Fields(results, seed=101)
+# Calculate the fields for later use. Seed is used when spline elements are used and upscale is used for Q4.
+fields = dic.Fields(results, seed=101,upscale=10)
 
 # We will now compare the results from the analysis to the deformation gradient which the image was deformed by
 
