@@ -8,9 +8,7 @@ def gaussian_noise_model(size, sigma):
 
 
 def noise_injector_additive(image, noise_generator):
-    mean = np.average(image)
-
-    image_noisy = image + mean * noise_generator(image.shape)
+    image_noisy = image + noise_generator(image.shape)
     return image_noisy
 
 
