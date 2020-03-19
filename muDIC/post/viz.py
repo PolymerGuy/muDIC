@@ -9,7 +9,7 @@ from muDIC.elements.q4 import Q4
 
 class Fields(object):
     # TODO: Remove Q4 argument. This should be detected automaticaly
-    def __init__(self, dic_results, seed=21,upscale=1,interpolation_order=1):
+    def __init__(self, dic_results, seed=21, upscale=1, interpolation_order=1):
         """
         Fields calculates field variables from the DIC-results.
         The implementation is lazy, hence getter methods have to be used.
@@ -38,14 +38,12 @@ class Fields(object):
 
         self.logger = logging.getLogger()
 
-
         # The type is implicitly checked by using the interface
         self.__res__ = dic_results
         self.__settings__ = dic_results.settings
         self.interpolation_order = interpolation_order
 
-
-        if isinstance(self.__settings__.mesh.element_def,Q4):
+        if isinstance(self.__settings__.mesh.element_def, Q4):
             q4 = True
             seed = 1
             self.logger.info("Post processing results from Q4 elements. The seed variable is ignored and the values "
@@ -56,9 +54,7 @@ class Fields(object):
                              "the seed varialbe to set the number of gridpoints to be evaluated along each element "
                              "axis.")
 
-
         self.__ee__, self.__nn__ = self.__generate_grid__(seed)
-
 
         self.__F__, self.__coords__ = self._deformation_gradient_(self.__res__.xnodesT, self.__res__.ynodesT,
                                                                   self.__settings__.mesh,
@@ -86,7 +82,6 @@ class Fields(object):
                 for t in range(n_frames):
                     self.__coords2__[0, i, :, :, t] = self.__coords__[:, i, 0, 0, t].reshape(grid_shape).transpose()
 
-
             # Overwrite the old results
             # TODO: Remove overwriting results as this is a painfully non-functional thing to do...
             self.__coords__ = self.__coords2__
@@ -95,37 +90,35 @@ class Fields(object):
             self.__coords__ = self.__coords2__
             self.__F__ = self.__F2__
 
-
-
-
             if upscale != 1.:
-                elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, self.__settings__.mesh.n_elx - 1, 1./upscale),
-                                                       np.arange(0, self.__settings__.mesh.n_ely - 1, 1./upscale))
-
+                elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, self.__settings__.mesh.n_elx - 1, 1. / upscale),
+                                                       np.arange(0, self.__settings__.mesh.n_ely - 1, 1. / upscale))
 
                 self.__F3__ = np.zeros(
                     (1, 2, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
 
-
                 self.__coords3__ = np.zeros(
                     (1, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
 
-
                 for i in range(2):
                     for t in range(n_frames):
-                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords__[0, i, :, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=self.interpolation_order).reshape(elms_x_fine.shape).transpose()
-
+                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords__[0, i, :, :, t],
+                                                                          [elms_y_fine.flatten(),
+                                                                           elms_x_fine.flatten()],
+                                                                          order=self.interpolation_order).reshape(
+                            elms_x_fine.shape).transpose()
 
                 for i in range(2):
                     for j in range(2):
                         for t in range(n_frames):
-                            self.__F3__[0, i,j, :, :, t] = map_coordinates(self.__F__[0, i, j,:, :, t], [elms_y_fine.flatten(), elms_x_fine.flatten()], order=self.interpolation_order).reshape(elms_x_fine.shape).transpose()
-
+                            self.__F3__[0, i, j, :, :, t] = map_coordinates(self.__F__[0, i, j, :, :, t],
+                                                                            [elms_y_fine.flatten(),
+                                                                             elms_x_fine.flatten()],
+                                                                            order=self.interpolation_order).reshape(
+                                elms_x_fine.shape).transpose()
 
                 self.__coords__ = self.__coords3__
                 self.__F__ = self.__F3__
-
-
 
     def __generate_grid__(self, seed):
 
@@ -136,7 +129,7 @@ class Fields(object):
 
         else:
 
-            if np.ndim(seed)==1:
+            if np.ndim(seed) == 1:
                 return np.meshgrid(np.linspace(0., 1., seed[0]),
                                    np.linspace(0., 1., seed[1]))
 
@@ -329,7 +322,7 @@ class Fields(object):
     def residual(self, frame_id):
         if self.__settings__.store_internals == False:
             raise ValueError("The analysis has to be run with store_internals=True")
-        if isinstance(self.__settings__.mesh.element_def,Q4):
+        if isinstance(self.__settings__.mesh.element_def, Q4):
             raise NotImplementedError("Q4 residual fields are not yet implemented")
         ref_id = ind_closest_below(frame_id, [ref.image_id for ref in self.__res__.reference])
         ref = self.__res__.reference[ref_id]
@@ -369,7 +362,7 @@ class Visualizer(object):
         self.images = images
         self.logger = logging.getLogger()
 
-    def show(self, field, component=(0, 0), frame=0, **kwargs):
+    def show(self, field="displacement", component=(0, 0), frame=0, quiverdisp=False, **kwargs):
         """
         Show the field variable
 
@@ -397,7 +390,7 @@ class Visualizer(object):
             fvar = self.fields.true_strain()[0, component[0], component[1], :, :, frame]
             xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
-        elif keyword in ("F","degrad","deformationgradient"):
+        elif keyword in ("F", "degrad", "deformationgradient"):
             fvar = self.fields.F()[0, component[0], component[1], :, :, frame]
             xs, ys = self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame]
 
@@ -431,9 +424,12 @@ class Visualizer(object):
                 n, m = self.images[frame].shape
                 plt.imshow(self.images[frame], cmap=plt.cm.gray, origin="lower", extent=(0, m, 0, n))
 
-            plt.contourf(xs, ys, fvar, 50, **kwargs)
-
-        plt.colorbar()
+            if quiverdisp:
+                plt.quiver(self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame],
+                           self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame],**kwargs)
+            else:
+                plt.contourf(xs, ys, fvar, 50, **kwargs)
+                plt.colorbar()
         plt.show()
 
 
