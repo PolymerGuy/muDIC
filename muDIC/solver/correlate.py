@@ -42,6 +42,7 @@ def correlate_img_to_ref_spline(node_pos, img, ref, settings):
    The function extracts a rectangular region of the image covered by the element, which may be very large
    if the mesh is tilted. This would reduce the performance of the routine
     """
+
     element_borders = find_element_borders(node_pos, settings.mesh)
 
     image_frame, node_pos_img_coords = convert_to_img_frame(img, node_pos, settings.mesh, element_borders, settings)
