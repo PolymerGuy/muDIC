@@ -1,3 +1,8 @@
+# This allows for running the example when the repo has been cloned
+import sys
+from os.path import abspath
+sys.path.extend([abspath(".")])
+
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,7 +34,7 @@ speckle_image = vlab.rosta_speckle(super_image_shape, dot_size=4, density=0.5, s
 displacement_function = vlab.deformation_fields.harmonic_bilat
 
 # Make an image deformed
-image_deformer = vlab.imageDeformer_from_uFunc(displacement_function, omega=3 * np.pi, amp=2.0)
+image_deformer = vlab.imageDeformer_from_uFunc(displacement_function, omega=2 * np.pi/(500.*downsample_factor), amp=2.0*downsample_factor)
 
 # Make an image down-sampler including downscaling, fill-factor and sensor grid irregularities
 downsampler = vlab.Downsampler(image_shape=super_image_shape, factor=downsample_factor, fill=.95,
@@ -45,7 +50,7 @@ image_generator = vlab.SyntheticImageGenerator(speckle_image=speckle_image, imag
 image_stack = dic.ImageStack(image_generator)
 
 # Now, make a mesh. Make sure to use enough elements
-mesher = dic.Mesher(deg_n=3, deg_e=3)
+mesher = dic.Mesher(deg_n=3, deg_e=3,type="spline")
 #mesh = mesher.mesh(image_stack)    # Use this if you want to mesh with a GUI
 mesh = mesher.mesh(image_stack,Xc1=50,Xc2=450,Yc1=50,Yc2=450,n_ely=8,n_elx=8, GUI=False)
 
@@ -65,14 +70,13 @@ fields = dic.Fields(results, seed=101)
 xs, ys = dic.utils.image_coordinates(image_stack[0])
 
 # We then find the displacement components for each image coordinate
-u_x, u_y = displacement_function(xs, ys, img_shape=xs.shape, omega=3. * np.pi, amp=2.0)
+u_x, u_y = displacement_function(xs, ys, omega=2. * np.pi/500., amp=2.0)
 
 # We now need to find the material points used in the DIC analysis, and extract the corresponding
 # correct displacement values
 e = fields.coords()[0, 1, :, :, 1]
 n = fields.coords()[0, 0, :, :, 1]
-# Make sure to include the down-sampling factor, as it alters the displacement values "they are in pixel units"
-res_field = dic.utils.extract_points_from_image(u_x, np.array([e, n])) / downsample_factor
+res_field = dic.utils.extract_points_from_image(u_x, np.array([e, n]))
 
 
 if show_results:
@@ -86,7 +90,7 @@ if show_results:
     plt.title("The imposed displacement field component in the X-direction")
 
     plt.figure()
-    plt.imshow(res_field - fields.disp()[0, 0, :, :, 1], cmap=plt.cm.magma)
+    plt.imshow(fields.disp()[0, 0, :, :, 1]-res_field, cmap=plt.cm.magma)
     plt.xlabel("Element e-coordinate")
     plt.ylabel("Element n-coordinate")
     plt.colorbar()
@@ -94,13 +98,13 @@ if show_results:
 
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
-    line1 = ax1.plot(res_field[:, 50], label="correct")
-    line2 = ax1.plot(fields.disp()[0, 0, :, 50, 1], label="DIC")
+    line1 = ax1.plot(res_field[:, 25], label="correct")
+    line2 = ax1.plot(fields.disp()[0, 0, :, 25, 1], label="DIC")
     ax1.set_xlabel("element e-coordinate")
     ax1.set_ylabel("Displacement [pixels]")
 
     ax2 = fig1.add_subplot(111, sharex=ax1, frameon=False)
-    line3 = ax2.plot(res_field[:, 50] - fields.disp()[0, 0, :, 50, 1], "r--", label="difference")
+    line3 = ax2.plot(res_field[:, 25] - fields.disp()[0, 0, :, 25, 1], "r--", label="difference")
     ax2.yaxis.tick_right()
     ax2.yaxis.set_label_position("right")
     ax2.set_ylabel("Deviation [pixels]")
