@@ -7,6 +7,52 @@ import numpy as np
 
 from ..IO.image_stack import ImageStack
 from ..elements.b_splines import BSplineSurface
+from ..elements.q4 import Q4
+
+
+def make_grid_Q4(c1x, c1y, c2x, c2y, nx, ny, elm):
+    # type: (float, float, float, float, int, int, instance) -> object
+    """
+    Makes regular grid for the given corned coordinates, number of elements along each axis and finite element definitions
+    :rtype: np.array,np.array,np.array
+    :param c1x: X-position of upper left corner
+    :param c1y: Y-position of upper left corner
+    :param c2x: X-position of lower right corner
+    :param c2y: Y-position of lower right corner
+    :param nx:  Number of elements along X-axis
+    :param ny:  Number of elements along Y-axis
+    :param elm: Finite element instance
+    :return: Connectivity matrix, X-coordinates of nodes, Y-Coordinates of nodes
+    """
+
+    n_decimals = 2
+
+    elmwidth = float(c2x - c1x) / float(nx)
+    elmheigt = float(c2y - c1y) / float(ny)
+
+    xnodes = elm.nodal_xpos * elmwidth
+    ynodes = elm.nodal_ypos * elmheigt
+
+    elements = []
+    nodes = set()
+
+    for i in range(ny):
+        for j in range(nx):
+            elements.append(zip(np.around(ynodes[:] + elmheigt * i,n_decimals), np.around(xnodes[:] + elmwidth * j,n_decimals)))
+            nodes.update(zip(np.around(ynodes[:] + elmheigt * i,n_decimals), np.around(xnodes[:] + elmwidth * j,n_decimals)))
+
+    nodes = sorted(list(nodes))
+
+    con_matrix = []
+
+    for e in range(nx * ny):
+        con_matrix.append(list(map(nodes.index, list(elements[e]))))
+
+    ynod, xnod = zip(*nodes)
+    ynode = np.array(ynod) + c1y
+    xnode = np.array(xnod) + c1x
+
+    return np.array(con_matrix).transpose(), xnode, ynode
 
 
 def make_grid(c1x, c1y, c2x, c2y, ny, nx, elm):
@@ -58,11 +104,14 @@ def make_grid(c1x, c1y, c2x, c2y, ny, nx, elm):
     node_x = np.array(xnod) + c1x
     node_y = np.array(ynod) + c1y
 
-    return node_x, node_y
+    con_matrix = np.zeros((nx * ny,1),dtype=np.int)
+    con_matrix[:,0] = np.arange(nx*ny,dtype=np.int)
+
+    return con_matrix, node_x, node_y
 
 
 class Mesher(object):
-    def __init__(self, deg_e=1, deg_n=1):
+    def __init__(self, deg_e=1, deg_n=1, type="q4"):
 
         """
         Mesher utility
@@ -85,6 +134,7 @@ class Mesher(object):
 
         self.deg_e = deg_e
         self.deg_n = deg_n
+        self.type = type
 
     def __gui__(self):
         from matplotlib.widgets import Button, RectangleSelector
@@ -168,7 +218,7 @@ class Mesher(object):
         overview = plt.subplot2grid((12, 4), (0, 0), rowspan=11, colspan=4)
 
         n, m = self.image.shape
-        overview.imshow(self.image, cmap=plt.cm.gray,origin="lower", extent=(0, m, 0, n))
+        overview.imshow(self.image, cmap=plt.cm.gray, origin="lower", extent=(0, m, 0, n))
 
         data, = overview.plot([], [], 'ro')
         overview.autoscale(1, 'both', 1)
@@ -205,7 +255,12 @@ class Mesher(object):
         if not type(n_elx) == int and type(n_ely) == int:
             raise TypeError("Coordinates should be given as floats")
 
-        element = BSplineSurface(self.deg_e, self.deg_n, **kwargs)
+        if self.type == "spline":
+
+            element = BSplineSurface(self.deg_e, self.deg_n, **kwargs)
+
+        else:
+            element = Q4()
 
         self._mesh_ = Mesh(element, Xc1, Xc2, Yc1, Yc2, n_elx, n_ely)
 
@@ -258,21 +313,38 @@ class Mesh(object):
         self.ynodes = None
         self.n_nodes = None
         self.n_elms = None
+        self.ele = None
 
         self.gen_node_positions()
 
     def gen_node_positions(self):
         logger = logging.getLogger(__name__)
         try:
-            self.xnodes, self.ynodes = make_grid(self.Xc1, self.Yc1, self.Xc2, self.Yc2,
-                                                 self.n_elx,
-                                                 self.n_ely, self.element_def)
+            if isinstance(self.element_def, Q4):
+                logger.info("Using Q4 elements")
+                self.ele, self.xnodes, self.ynodes = make_grid_Q4(self.Xc1, self.Yc1, self.Xc2, self.Yc2,
+                                                                  self.n_elx,
+                                                                  self.n_ely, self.element_def)
 
-            logger.info('Element contains %.1f X %.1f pixels and is divided in %i X %i ' % (
-                (self.Xc2 - self.Xc1) / self.n_elx, (self.Yc2 - self.Yc1) / self.n_ely, self.n_elx, self.n_ely))
+                logger.info('Element contains %.1f X %.1f pixels and is divided in %i X %i ' % (
+                    (self.Xc2 - self.Xc1) / self.n_elx, (self.Yc2 - self.Yc1) / self.n_ely, self.n_elx, self.n_ely))
 
-            self.n_nodes = len(self.xnodes)
-            self.n_elms = 1
+                self.n_nodes = len(self.xnodes)
+                self.n_elms = self.n_elx * self.n_ely
+            elif isinstance(self.element_def, BSplineSurface):
+                logger.info("Using B-Spline elements")
+                self.ele, self.xnodes, self.ynodes = make_grid(self.Xc1, self.Yc1, self.Xc2, self.Yc2,
+                                                               self.n_elx,
+                                                               self.n_ely, self.element_def)
+
+                logger.info('Element contains %.1f X %.1f pixels and is divided in %i X %i ' % (
+                    (self.Xc2 - self.Xc1) / self.n_elx, (self.Yc2 - self.Yc1) / self.n_ely, self.n_elx, self.n_ely))
+
+                self.n_nodes = len(self.xnodes)
+                self.n_elms = 1
+
+            else:
+                raise ValueError("Unknown element type")
 
         except Exception as e:
             logger.exception("Mesh generation failed")
@@ -336,5 +408,3 @@ class Mesh(object):
         self.n_ely = self.element_def.degree_n + 1
         self.n_elms = 1
         self.gen_node_positions()
-
-
