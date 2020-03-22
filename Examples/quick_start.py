@@ -1,3 +1,8 @@
+# This allows for running the example when the repo has been cloned
+import sys
+from os.path import abspath
+sys.path.extend([abspath(".")])
+
 import muDIC as dic
 import logging
 

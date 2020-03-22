@@ -56,7 +56,7 @@ Make sure you have Python 3 installed with pip and virtualenv
 
 Make new folder and use a terminal to make a virtual environment:
 ```
-$ python -m virtualenv env
+$ python -m venv env
 $ source env/bin/activate #On Linux and Mac OS
 $ env\Scripts\activate.bat #On Windows
 ```
@@ -83,7 +83,7 @@ We recommend that you always use virtual environments, either by virtualenv or b
 Virtual env:
 ```
 $ cd /path/to/muDIC
-$ python venv env
+$ python -m venv env
 $ source ./env/bin/activate #On Linux and Mac OS
 $ env\Scripts\activate.bat #On Windows
 $ pip install -r requirements.txt
