@@ -81,7 +81,7 @@ This project is described in the following paper and citation is highly apprecia
    :caption: First Steps
 
    intro/installing
-   intro/dic_intro
+
 
 .. _examples:
 
