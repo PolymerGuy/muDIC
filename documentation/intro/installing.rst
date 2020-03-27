@@ -10,7 +10,7 @@ There are two main ways to to this:
 Installing via a package manager:
 ----------------------------------
 Prerequisites:
-    This toolkit is tested on Python 2.7x and Python 3.7
+    This toolkit is tested on Python 3.7
 
 On the command line, check if python is available::
 
@@ -27,12 +27,12 @@ $ pip install muDIC
 
 and you are good to go!
 
-We recommend that you always use virtual environments by virtualenv or by Conda env.
+We recommend that you always use virtual environments by virtualenv.
 
 Virtual env::
 
 $ cd /path/to/your/project
-$ python -m virtualenv env
+$ python -m venv env
 $ source ./env/bin/activate #On Linux and Mac OS
 $ env\Scripts\activate.bat #On Windows
 $ pip install muDIC
@@ -59,13 +59,12 @@ Installing:
 
     Virtual env::
     
-    $ python -m virtualenv env
+    $ python -m venv env
     $ source ./env/bin/activate #On Linux and Mac OS
     $ env\Scripts\activate.bat #On Windows
     $ pip install -r requirements.txt
 
-
-    You can now run an example::
+    You can now run an example, correct the path to the images and run by::
     $ python path_to_muDIC/Examples/quick_start.py
 
 
