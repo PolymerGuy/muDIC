@@ -17,8 +17,8 @@ However, in reality, the data we get tends to look like this:
 
 .. image:: deformation.gif
 
-Here we have painted a speckle pattern on the surface of a specimen and then took pictures of it while it was deformed.
-When we are working with such data, tracking a point on the surface of the specimen is not easily done.
+Here we have painted a speckle pattern on the surface of a specimen and used a camera to capture images of the surface while
+it was deformed. When we are working with such data, tracking a point on the surface of the specimen is not easily done.
 
 First of all, there appears not be any distinct points?
 
@@ -70,7 +70,7 @@ So, the job of the correlation routine is to find :math:`\boldsymbol{x}`.
 **Let us look at a very common misconception...**
 
 
-Misconception I: We track single pixels explicitly?
+Misconception: We track single pixels explicitly?
 ----------------------------------
 
 TLDR; No, we dont...
@@ -102,7 +102,7 @@ equal to the grey scales at :math:`\boldsymbol{x_0}` in :math:`g`.
 
 .. note::
 
-    We have now improved our problem by having many equations (grey scale conservation of every pixel) but only a few
+    We have now reduced our problem by having many equations (grey scale conservation of every pixel) but only a few
     unknowns (the nodal positions).
 
 
@@ -127,12 +127,12 @@ we see the difference between the images:
 
 
 We now clearly see that the grey scales are not conserved and that :math:`g(\boldsymbol{x_0}) \neq f(\boldsymbol{x_0})`.
-Our job is now to figure out where the grey scales in found at :math:`\boldsymbol{x_0}` in :math:`g` have moved, that is we need to determine :math:`g(\boldsymbol{x})`
-such that :math:`g(\boldsymbol{x_0}) = f(\boldsymbol{x})`
+Our job is now to figure out where the grey scales found at :math:`\boldsymbol{x_0}` in :math:`g` have moved.
+This means that is we need to find :math:`\boldsymbol{x}` such that :math:`g(\boldsymbol{x_0}) = f(\boldsymbol{x})`
 
 
-If a node is moved, the the points :math:`\boldsymbol{x}` are moved like shown on the left below.
-One the right side, the coordinates :math:`\boldsymbol{x}` have been moved back into their initial positions :math:`\boldsymbol{x_0}`.
+If a node is moved, the points :math:`\boldsymbol{x}` are moved like shown on the left below.
+On the right side, the coordinates :math:`\boldsymbol{x}` have been moved back to their initial positions :math:`\boldsymbol{x_0}`.
 
 
 
@@ -140,7 +140,7 @@ One the right side, the coordinates :math:`\boldsymbol{x}` have been moved back 
 
 Let us now sample the grey scale values of the deformed image :math:`f` at the positions :math:`\boldsymbol{x}`,
 and plot the grey scales in the figure on the right at the positions where they used to be, namely at :math:`\boldsymbol{x_0}`.
-This operation can be thought of as "un-warping" the image.
+This operation can be thought of as "un-warping" the image. The "un-warped" image should be equal to the undeformed image :math:`g`.
 
 .. image:: overlay.gif
 
