@@ -237,6 +237,10 @@ def correlate(inputs, correlator, reference_gen):
 
             node_position_t.append(node_coords)
 
+    except Exception as e:
+        logger.exception(e)
+        pass
+
     finally:
         return np.array(node_position_t), reference_stack, Ic_stacks
 
