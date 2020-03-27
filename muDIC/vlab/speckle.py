@@ -3,15 +3,6 @@ import random
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
-try:
-    from noise import pnoise2
-except ImportError as e:
-    print(e)
-    print("The package: noise, is not installed. Perlin speckle is not available")
-
-
-    def pnoise2(*args, **kwargs):
-        raise ImportError("The noise package is not installed")
 
 
 def insert_circle(image, position, radius, allow_overlap):
@@ -138,52 +129,6 @@ def normalize_array_to_unity(array):
 
 def smooth_step(array, c):
     return 0.5 * (1. + np.tanh((array) / c ** 2.))
-
-
-def perlin_noise_speckle(shape, multiplier=64., octaves=1):
-    """ Perlin noise based speckle
-
-    Returns a speckle made by using Perlin noise provided by the Noise package by Casey Duncan (caseman).
-
-
-    Example
-    -------
-    Let us make an example perlin noise spackle with a size of 1000x1000 pixels using the defaults.
-
-    The following code generates such a speckle
-
-    >>> import muDIC as dic
-    >>> speckle = dic.perlin_noise_speckle((1000,1000))
-
-    Notes
-    -------
-    The speckle generator uses the "pnoise2" function of the noise library, so you can look at the docs for that library
-    for further documentation.
-
-    Parameters
-    ----------
-
-    shape : tuple
-        The image size as a tuple of integers
-    multiplier : float
-        The frequency multiplier
-    octaves: float, int
-        The number of octaves used
-    """
-
-    freq = multiplier * octaves
-    img = np.zeros(shape)
-    n, m = shape
-
-    for y in range(n):
-        for x in range(m):
-            img[x, y] = float(pnoise2(x / freq, y / freq, octaves) * (float(n) - 1.) + float(n))
-
-    img = normalize_array_to_unity(img) * 2.
-    img = smooth_step(img.astype(np.float), c=0.7)
-    img = normalize_array_to_unity(img)
-
-    return img
 
 
 def rosta_speckle(size, dot_size=4, density=0.32, smoothness=2.0):
