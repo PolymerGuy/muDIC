@@ -52,3 +52,6 @@ viz = dic.Visualizer(fields,images=images)
 # Uncomment the line below to see the results
 # viz.show(field="displacement", component = (1,1), frame=-1)
 
+# Uncomment the line below to export the results to CSV files
+#dic.IO.readWriteUtils.exportCSV(fields,'test',-1)
+

@@ -1,4 +1,6 @@
 import dill
+import csv
+import muDIC as dic
 
 
 def save(dic, name):
@@ -15,3 +17,33 @@ def load(name):
             return dill.load(myfile)
     except:
         raise TypeError("Invalid inputs")
+
+
+def exportCSV(fields,name,frame):
+
+    if not isinstance(fields, dic.post.viz.Fields):
+        raise ValueError("Only instances of Fields are accepted")
+
+    try:
+        xs, ys = fields.coords()[0, 0, :, :, frame], fields.coords()[0, 1, :, :, frame]
+        # Displacement
+        dx = fields.disp()[0, 0, :, :, frame]
+        dy = fields.disp()[0, 1, :, :, frame]
+        # True strain
+        ts_xx = fields.true_strain()[0, 0, 0, :, :, frame]
+        ts_yy = fields.true_strain()[0, 1, 1, :, :, frame]
+        ts_xy = fields.true_strain()[0, 0, 1, :, :, frame]
+        # Engineering strain
+        es_xx = fields.eng_strain()[0, 0, 0, :, :, frame]
+        es_yy = fields.eng_strain()[0, 1, 1, :, :, frame]
+        es_xy = fields.eng_strain()[0, 0, 1, :, :, frame]
+        id = 0
+        with open(str(name)+'.csv', 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["id","x","y","ux","uy","true_strain_xx","true_strain_yy","true_strain_xy","eng_strain_xx","eng_strain_yy","eng_strain_xy"])
+            for i in range(0,len(xs)):
+                for j in range(0,len(xs[i])):
+                    writer.writerow([id,xs[i][j],ys[i][j],dx[i][j],dy[i][j],ts_xx[i][j],ts_yy[i][j],ts_xy[i][j],es_xx[i][j],es_yy[i][j],es_xy[i][j]])
+                    id += 1
+    except:
+        raise IOError('Could not write CSV files')
