@@ -64,6 +64,7 @@ class Fields(object):
         # To make the result formatting consistent across element formulations, we arrange the elements onto a grid
         # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
         # by using 3rd order spline interpolation.
+        n_frames = self.__F__.shape[-1]
 
         if q4:
             # Flatten things form multiple elements to a grid of elements
@@ -90,35 +91,35 @@ class Fields(object):
             self.__coords__ = self.__coords2__
             self.__F__ = self.__F2__
 
-            if upscale != 1.:
-                elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, self.__settings__.mesh.n_elx - 1, 1. / upscale),
-                                                       np.arange(0, self.__settings__.mesh.n_ely - 1, 1. / upscale))
+        if upscale != 1.:
+            elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, self.__coords__.shape[-3]-1, 1. / upscale),
+                                                   np.arange(0, self.__coords__.shape[-2]-1 , 1. / upscale))
 
-                self.__F3__ = np.zeros(
-                    (1, 2, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
+            self.__F3__ = np.zeros(
+                (1, 2, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
 
-                self.__coords3__ = np.zeros(
-                    (1, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
+            self.__coords3__ = np.zeros(
+                (1, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
 
-                for i in range(2):
+            for i in range(2):
+                for t in range(n_frames):
+                    self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords__[0, i, :, :, t],
+                                                                      [elms_y_fine.flatten(),
+                                                                       elms_x_fine.flatten()],
+                                                                      order=self.interpolation_order).reshape(
+                        elms_x_fine.shape).transpose()
+
+            for i in range(2):
+                for j in range(2):
                     for t in range(n_frames):
-                        self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords__[0, i, :, :, t],
-                                                                          [elms_y_fine.flatten(),
-                                                                           elms_x_fine.flatten()],
-                                                                          order=self.interpolation_order).reshape(
+                        self.__F3__[0, i, j, :, :, t] = map_coordinates(self.__F__[0, i, j, :, :, t],
+                                                                        [elms_y_fine.flatten(),
+                                                                         elms_x_fine.flatten()],
+                                                                        order=self.interpolation_order).reshape(
                             elms_x_fine.shape).transpose()
 
-                for i in range(2):
-                    for j in range(2):
-                        for t in range(n_frames):
-                            self.__F3__[0, i, j, :, :, t] = map_coordinates(self.__F__[0, i, j, :, :, t],
-                                                                            [elms_y_fine.flatten(),
-                                                                             elms_x_fine.flatten()],
-                                                                            order=self.interpolation_order).reshape(
-                                elms_x_fine.shape).transpose()
-
-                self.__coords__ = self.__coords3__
-                self.__F__ = self.__F3__
+            self.__coords__ = self.__coords3__
+            self.__F__ = self.__F3__
 
     def __generate_grid__(self, seed):
 
@@ -134,8 +135,17 @@ class Fields(object):
                                    np.linspace(0., 1., seed[1]))
 
             else:
-                return np.meshgrid(np.linspace(0., 1., seed),
-                                   np.linspace(0., 1., seed))
+
+                shape = (
+                    self.__res__.settings.mesh.element_def.n_nodes_n, self.__res__.settings.mesh.element_def.n_nodes_e)
+
+                ctrl_e = np.linspace(0., 1.0, shape[0])
+                ctrl_n = np.linspace(0., 1.0, shape[1])
+
+                mids_e = (ctrl_e[1:] + ctrl_e[:-1]) / 2.
+                mids_n = (ctrl_n[1:] + ctrl_n[:-1]) / 2.
+
+                return np.meshgrid(mids_n, mids_e)
 
     @staticmethod
     def _deformation_gradient_(xnodesT, ynodesT, msh, elm, e, n):
@@ -207,11 +217,11 @@ class Fields(object):
         :param F:
         :return:
         """
-        E11 = F[:, 0, 0, :, :, :] ** 2. + F[:, 0, 1, :, :, :] ** 2.
+        E11 = F[:, 0, 0, :, :, :] ** 2. + F[:, 1, 0, :, :, :] ** 2.
 
         E12 = F[:, 0, 0, :, :, :] * F[:, 1, 0, :, :, :] + F[:, 0, 1, :, :, :] * F[:, 1, 1, :, :, :]
 
-        E22 = F[:, 1, 0, :, :, :] ** 2. + F[:, 1, 1, :, :, :] ** 2.
+        E22 = F[:, 0, 1, :, :, :] ** 2. + F[:, 1, 1, :, :, :] ** 2.
 
         E = np.array([[E11, E12], [E12, E22]])
 
@@ -226,32 +236,26 @@ class Fields(object):
         :param F: Deformation gradient tensor F_ij on the form [nEl,i,j,...]
         :return: Green Lagrange strain tensor E_ij on the form [nEl,i,j,...]
         """
-        E11 = 0.5 * (F[:, 0, 0, :, :, :] ** 2. + F[:, 0, 1, :, :, :] ** 2. - 1.)
 
-        E12 = 0.5 * (F[:, 0, 0, :, :, :] * F[:, 1, 0, :, :, :] + F[:, 0, 1, :, :, :] * F[:, 1, 1, :, :, :])
+        Green_deformation = np.einsum('nji...,njo...->nio...', F, F)
 
-        E22 = 0.5 * (F[:, 1, 0, :, :, :] ** 2. + F[:, 1, 1, :, :, :] ** 2. - 1.)
+        I = np.eye(2, dtype=np.float)
 
-        E = np.array([[E11, E12], [E12, E22]])
+        # Calculate green strain tensor as 0.5(F^T * F - I)
+        Green_strain = 0.5 * (Green_deformation - I[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
 
-        E[E == np.nan] = 0.
-
-        return np.moveaxis(E, 2, 0)
+        return Green_strain
 
     @staticmethod
     def _principal_strain_(G):
-        E11 = G[:, 0, 0]
-        E12 = G[:, 0, 1]
-        E21 = G[:, 1, 0]
-        E22 = G[:, 1, 1]
+
 
         E_temp = np.moveaxis(G, 1, -1)
         E = np.moveaxis(E_temp, 1, -1)
 
         eigvals, eigvecs = np.linalg.eig(E)
 
-        # print(np.shape(eigvals))
-        # print(np.shape(eigvecs))
+
 
         ld1 = np.sqrt(eigvals[:, :, :, :, 0])
         ld2 = np.sqrt(eigvals[:, :, :, :, 1])
@@ -259,17 +263,14 @@ class Fields(object):
         ev1 = eigvecs[:, :, :, :, 0, 0]
         ev2 = eigvecs[:, :, :, :, 0, 1]
 
-        # print(np.shape(eigvals))
-        # print(np.shape(eigvecs))
-        # print(np.shape(ld1))
-        # print(np.shape(ev1))
 
         ld = np.moveaxis(np.array([ld1, ld2]), 0, 1)
         ev = np.moveaxis(np.array([ev1, ev2]), 0, 1)
-        print(np.shape(ld1))
-        print(np.shape(ev1))
+
 
         return ld, ev
+
+
 
     @staticmethod
     def _engineering_strain_(E):
@@ -280,6 +281,56 @@ class Fields(object):
         :param E: Green Lagrange strain tensor E_ij on the form [nEl,i,j,...]
         :return: Engineering strain tensor eps_ij on the form [nEl,i,j,...]
         """
+
+    #    # Find the stretch tensor
+        # First, the Green deformation tensor "C²"
+        G = 2.*E + np.eye(2)[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
+        tan_2_theta = 2.0 * G[:,0,1,:,:,:]/(G[:,0,0,:,:,:]-G[:,1,1,:,:,:])
+        theta = np.arctan(tan_2_theta)/2.
+        print(theta[0,0,0,0])
+        eigs,shit =np.linalg.eig(G[0,:,:,0,0,0])
+        print("Eigenvalues are:",eigs)
+        print(np.arctan(shit[0,1]/shit[0,0]))
+
+        R = np.array([[np.cos(theta),np.sin(theta)],[-np.sin(theta),np.cos(theta)]])
+        print(R[:,:,0,0,0,0])
+        print(R.shape)
+        print(G.shape)
+        G_temp = np.einsum('ijn...,njo...->noi...', R, G)
+        print(G_temp[0,:,:,0,0,0])
+
+        # np.einsum('nji...,njo...->nio...', F, F)
+        print(G_temp.shape)
+        print(R.shape)
+        G_principal = np.einsum('njo...,ijn...->nio...', G_temp, R)
+       # G_principal = np.einsum('ji...,jo...->io...', R, R)
+
+
+
+
+       # G_principal = np.einsum('ij...,njo...->nio...', R, G)
+       # G_principal = np.einsum('njo...,ij...->nio...', G, R.transpose())
+        print(G_principal.shape)
+        print(G_principal[0,:,:,0,0,0])
+        # np.einsum('nji...,njo...->nio...', F, F)
+
+#
+    #    # Rotate it back
+    #    stretches = np.dot(R,princ_stretch).dot(R.transpose())
+    #    # Fix the formatting
+    #    stretches_temp = np.moveaxis(stretches, -1, 1)
+    #    stretches = np.moveaxis(stretches_temp, -1, 1)
+
+#        eps_xx = stretches[:,0,0,:,:,:]
+#        eps_yy = stretches[:,1,1,:,:,:]
+#        eps_xy = stretches[:,0,1,:,:,:]
+
+
+#        ld = np.moveaxis(np.array([pr, ld2]), 0, 1)
+#        ev = np.moveaxis(np.array([ev1, ev2]), 0, 1)
+
+
+
         eps_xx = np.sqrt(1. + 2. * E[:, 0, 0, :]) - 1.
         eps_yy = np.sqrt(1. + 2. * E[:, 1, 1, :]) - 1.
         eps_xy = 0.5 * np.arcsin(2. * E[:, 0, 1, :] / np.sqrt((1. + 2. * E[:, 0, 0, :]) * (1. + 2. * E[:, 1, 1, :])))
@@ -287,6 +338,7 @@ class Fields(object):
         eps = np.array([[eps_xx, eps_xy], [eps_xy, eps_yy]])
 
         return np.moveaxis(eps, 2, 0)
+        #return stretches-1
 
     @staticmethod
     def _true_strain_(eps):
@@ -426,10 +478,15 @@ class Visualizer(object):
 
             if quiverdisp:
                 plt.quiver(self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame],
-                           self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame],**kwargs)
+                           self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame], **kwargs)
             else:
                 plt.contourf(xs, ys, fvar, 50, **kwargs)
                 plt.colorbar()
+
+        elif np.ndim(fvar) == 1:
+            plt.tricontourf(xs,ys,fvar,**kwargs)
+            plt.colorbar()
+
         plt.show()
 
 
