@@ -270,6 +270,27 @@ class Fields(object):
 
         return ld, ev
 
+    @staticmethod
+    def _polar_decomposition_(F):
+        """
+        Perform polar decomposition of F by assuming that F = RU and finding the principal
+        values of F^T * F and taking the square root to find U
+        :param F:
+        :return:
+        """
+        # Find principal direction directly exploiting that F^t F is symmetric
+        G = np.einsum('nji...,njo...->nio...', F, F)
+        tan_2_theta = 2.0 * G[:, 0, 1, :, :, :] / (G[:, 0, 0, :, :, :] - G[:, 1, 1, :, :, :])
+        theta = np.arctan(tan_2_theta) / 2.
+        R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+        G_temp = np.einsum('ijn...,njo...->noi...', R, G)
+        G_principal = np.einsum('njo...,ijn...->nio...', G_temp, R)
+
+        # Now, we can find the principal stretches by taking the square root
+        G_principal[G_principal < 0.] = 0.
+        U = np.sqrt(G_principal)
+
+        return R, U
 
 
     @staticmethod
@@ -285,60 +306,29 @@ class Fields(object):
     #    # Find the stretch tensor
         # First, the Green deformation tensor "C²"
         G = 2.*E + np.eye(2)[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
-        tan_2_theta = 2.0 * G[:,0,1,:,:,:]/(G[:,0,0,:,:,:]-G[:,1,1,:,:,:])
-        theta = np.arctan(tan_2_theta)/2.
-        print(theta[0,0,0,0])
-        eigs,shit =np.linalg.eig(G[0,:,:,0,0,0])
-        print("Eigenvalues are:",eigs)
-        print(np.arctan(shit[0,1]/shit[0,0]))
 
-        R = np.array([[np.cos(theta),np.sin(theta)],[-np.sin(theta),np.cos(theta)]])
-        print(R[:,:,0,0,0,0])
-        print(R.shape)
-        print(G.shape)
-        G_temp = np.einsum('ijn...,njo...->noi...', R, G)
-        print(G_temp[0,:,:,0,0,0])
+        try:
+            tan_2_theta = 2.0 * G[:,0,1,:,:,:]/(G[:,0,0,:,:,:]-G[:,1,1,:,:,:])
+            theta = np.arctan(tan_2_theta) / 2.
+            R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+            G_temp = np.einsum('ijn...,njo...->noi...', R, G)
 
-        # np.einsum('nji...,njo...->nio...', F, F)
-        print(G_temp.shape)
-        print(R.shape)
-        G_principal = np.einsum('njo...,ijn...->nio...', G_temp, R)
-       # G_principal = np.einsum('ji...,jo...->io...', R, R)
+            G_principal = np.einsum('njo...,ijn...->nio...', G_temp, R)
 
+            G_principal[G_principal < 0.] = 0.
+            eps = np.sqrt(G_principal) - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
-
-
-       # G_principal = np.einsum('ij...,njo...->nio...', R, G)
-       # G_principal = np.einsum('njo...,ij...->nio...', G, R.transpose())
-        print(G_principal.shape)
-        print(G_principal[0,:,:,0,0,0])
-        # np.einsum('nji...,njo...->nio...', F, F)
-
-#
-    #    # Rotate it back
-    #    stretches = np.dot(R,princ_stretch).dot(R.transpose())
-    #    # Fix the formatting
-    #    stretches_temp = np.moveaxis(stretches, -1, 1)
-    #    stretches = np.moveaxis(stretches_temp, -1, 1)
-
-#        eps_xx = stretches[:,0,0,:,:,:]
-#        eps_yy = stretches[:,1,1,:,:,:]
-#        eps_xy = stretches[:,0,1,:,:,:]
+            theta = -np.arctan(tan_2_theta) / 2.
+            R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+            eps_temp = np.einsum('ijn...,njo...->noi...', R, eps)
+            eps = np.einsum('njo...,ijn...->nio...', eps_temp, R)
+            return eps
+        except FloatingPointError:
+            # Principal directions are not defined "biaxial state"
+            eps = np.sqrt(G) - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
+            return eps
 
 
-#        ld = np.moveaxis(np.array([pr, ld2]), 0, 1)
-#        ev = np.moveaxis(np.array([ev1, ev2]), 0, 1)
-
-
-
-        eps_xx = np.sqrt(1. + 2. * E[:, 0, 0, :]) - 1.
-        eps_yy = np.sqrt(1. + 2. * E[:, 1, 1, :]) - 1.
-        eps_xy = 0.5 * np.arcsin(2. * E[:, 0, 1, :] / np.sqrt((1. + 2. * E[:, 0, 0, :]) * (1. + 2. * E[:, 1, 1, :])))
-
-        eps = np.array([[eps_xx, eps_xy], [eps_xy, eps_yy]])
-
-        return np.moveaxis(eps, 2, 0)
-        #return stretches-1
 
     @staticmethod
     def _true_strain_(eps):

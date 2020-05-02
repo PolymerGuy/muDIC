@@ -84,6 +84,12 @@ class TestDIC_Post(TestCase):
         # Format as [nEl,i,j,...]
         F = np.reshape(rand_nrs, (5, 2, 2, 5, 5, 5))
 
+        theta = np.pi/5 * 0.
+        R = np.array([[np.cos(theta),np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+        U = np.array([[1.5,0.0000],[0.,-0.5]])
+        F = R.dot(U)
+        F = F[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
+
         green_strain = Fields._green_strain_(F)
 
         eng_strain = Fields._engineering_strain_(green_strain)
@@ -94,10 +100,15 @@ class TestDIC_Post(TestCase):
         E12 = 0.5 * np.sin(2. * eng_strain[:, 0, 1, :, :, :]) * (1. + eng_strain[:, 0, 0, :, :, :]) * (
                 1. + eng_strain[:, 1, 1, :, :, :])
 
+
+
         # Deterine absolute error
         deviation11 = np.abs(E11 - green_strain[:, 0, 0, :, :, :])
         deviation22 = np.abs(E22 - green_strain[:, 1, 1, :, :, :])
         deviation12 = np.abs(E12 - green_strain[:, 0, 1, :, :, :])
+
+
+        print(deviation11)
 
         self.assertEqual(True, all([dev < toll for dev in deviation11.flatten()]))
         self.assertEqual(True, all([dev < toll for dev in deviation12.flatten()]))
@@ -207,7 +218,7 @@ class TestDIC_Post(TestCase):
         toll = 1e-7
 
         # Deformation gradient
-        F_shear = np.array([[1., 0.0001], [0.0001, 1.]])
+        F_shear = np.array([[1., 0.001], [0.001, 1.]])
 
         F_shear_stack = np.ones((5, 2, 2, 5, 5, 2)) * F_shear[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
@@ -234,8 +245,6 @@ class TestDIC_Post(TestCase):
         eng_strain_shear_rot = np.einsum('ij,njk...,kl...->nil...', R.transpose(), eng_strain_tc, R)
 
         deviation = np.abs(eng_strain_shear - eng_strain_shear_rot)
-
-        # deviation = np.abs(eng_strain - (F-np.eye(2))[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis])
 
         self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
 
