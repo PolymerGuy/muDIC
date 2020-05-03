@@ -92,8 +92,8 @@ class Fields(object):
             self.__F__ = self.__F2__
 
         if upscale != 1.:
-            elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, self.__coords__.shape[-3]-1, 1. / upscale),
-                                                   np.arange(0, self.__coords__.shape[-2]-1 , 1. / upscale))
+            elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, self.__coords__.shape[-3] - 1, 1. / upscale),
+                                                   np.arange(0, self.__coords__.shape[-2] - 1, 1. / upscale))
 
             self.__F3__ = np.zeros(
                 (1, 2, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
@@ -217,17 +217,8 @@ class Fields(object):
         :param F:
         :return:
         """
-        E11 = F[:, 0, 0, :, :, :] ** 2. + F[:, 1, 0, :, :, :] ** 2.
+        return np.einsum('nji...,njo...->nio...', F, F)
 
-        E12 = F[:, 0, 0, :, :, :] * F[:, 1, 0, :, :, :] + F[:, 0, 1, :, :, :] * F[:, 1, 1, :, :, :]
-
-        E22 = F[:, 0, 1, :, :, :] ** 2. + F[:, 1, 1, :, :, :] ** 2.
-
-        E = np.array([[E11, E12], [E12, E22]])
-
-        E[E == np.nan] = 0.
-
-        return np.moveaxis(E, 2, 0)
 
     @staticmethod
     def _green_strain_(F):
@@ -237,26 +228,35 @@ class Fields(object):
         :return: Green Lagrange strain tensor E_ij on the form [nEl,i,j,...]
         """
 
-        Green_deformation = np.einsum('nji...,njo...->nio...', F, F)
+        green_deformation = np.einsum('nji...,njo...->nio...', F, F)
 
         I = np.eye(2, dtype=np.float)
 
         # Calculate green strain tensor as 0.5(F^T * F - I)
-        Green_strain = 0.5 * (Green_deformation - I[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
+        green_strain = 0.5 * (green_deformation - I[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
 
-        return Green_strain
+        return green_strain
 
     @staticmethod
-    def _operate_in_eigen_space_(G,func=None):
+    def _apply_func_in_eigen_space_(array, func=None):
+        """
+
+        Parameters
+        ----------
+        array
+        func
+
+        Returns
+        -------
+
+        """
         if func is None:
-            func = lambda x :x
+            func = lambda x: x
 
         # In order to use the numpy builtins, we need to have the two axes of interest at the end of the array
-        E_temp = np.moveaxis(G, 1, -1)
-        E = np.moveaxis(E_temp, 1, -1)
+        E = np.moveaxis(np.moveaxis(array, 1, -1), 1, -1)
 
         eigvals, eigvecs = np.linalg.eig(E)
-
 
         ev1 = eigvecs[:, :, :, :, 0, 0]
         ev2 = eigvecs[:, :, :, :, 0, 1]
@@ -264,19 +264,16 @@ class Fields(object):
         ld1 = eigvals[:, :, :, :, 0]
         ld2 = eigvals[:, :, :, :, 1]
 
-        theta = np.arctan(ev2/ev1)
+        theta = np.arctan(ev2 / ev1)
 
+        arr_princ = np.zeros_like(array)
 
-        eps_princ = np.zeros_like(G)
+        arr_princ[:, 0, 0, :, :, :] = func(ld1)
+        arr_princ[:, 1, 1, :, :, :] = func(ld2)
 
-        eps_princ[:,0,0,:,:,:] = func(ld1)
-        eps_princ[:,1,1,:,:,:] = func(ld2)
-
-
-        theta = theta
         R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-        eps_temp = np.einsum('ijn...,njo...->noi...', R, eps_princ)
-        eps= np.einsum('njo...,ijn...->nio...', eps_temp, R)
+        eps_temp = np.einsum('ijn...,njo...->noi...', R, arr_princ)
+        eps = np.einsum('njo...,ijn...->nio...', eps_temp, R)
 
         return eps
 
@@ -290,18 +287,10 @@ class Fields(object):
         """
         # Find principal direction directly exploiting that F^t F is symmetric
         G = np.einsum('nji...,njo...->nio...', F, F)
-        tan_2_theta = 2.0 * G[:, 0, 1, :, :, :] / (G[:, 0, 0, :, :, :] - G[:, 1, 1, :, :, :])
-        theta = np.arctan(tan_2_theta) / 2.
-        R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-        G_temp = np.einsum('ijn...,njo...->noi...', R, G)
-        G_principal = np.einsum('njo...,ijn...->nio...', G_temp, R)
+        U = Fields._apply_func_in_eigen_space_(G,np.sqrt)
 
-        # Now, we can find the principal stretches by taking the square root
-        G_principal[G_principal < 0.] = 0.
-        U = np.sqrt(G_principal)
-
-        return R, U
-
+        # TODO: Add R to the output
+        return U
 
     @staticmethod
     def _engineering_strain_(E):
@@ -312,37 +301,13 @@ class Fields(object):
         :param E: Green Lagrange strain tensor E_ij on the form [nEl,i,j,...]
         :return: Engineering strain tensor eps_ij on the form [nEl,i,j,...]
         """
-    #    # Find the stretch tensor
+        #    # Find the stretch tensor
         # First, the Green deformation tensor "C²"
         logger = logging.getLogger()
-        G = 2.*E + np.eye(2)[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
-        n_frames = G.shape[-1]
-        eps = np.zeros_like(G)
-        for i in range(n_frames):
-            #G = G[:,:,:,:,:,1:]
-            try:
-                tan_2_theta = 2.0 * G[:,0,1,:,:,i]/(G[:,0,0,:,:,i]-G[:,1,1,:,:,i])
-            except FloatingPointError:
-                tan_2_theta = np.zeros_like(G[:,0,1,:,:,i])
-            theta = np.arctan(tan_2_theta) / 2.
+        G = 2. * E + np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
+        eps = Fields._apply_func_in_eigen_space_(G,func=lambda x:np.sqrt(x)-1.0)
 
-
-            R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-            G_temp = np.einsum('ijn...,njo...->noi...', R, G[:,:,:,:,:,i])
-
-            G_principal = np.einsum('njo...,ijn...->nio...', G_temp, R)
-
-            G_principal[G_principal < 0.] = 0.
-            eps_princ = np.sqrt(G_principal) - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis]
-
-            theta = -np.arctan(tan_2_theta) / 2.
-            R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-            eps_temp = np.einsum('ijn...,njo...->noi...', R, eps_princ)
-            eps[:,:,:,:,:,i] = np.einsum('njo...,ijn...->nio...', eps_temp, R)
         return eps
-
-
-
 
     @staticmethod
     def _true_strain_(eps):
@@ -488,7 +453,7 @@ class Visualizer(object):
                 plt.colorbar()
 
         elif np.ndim(fvar) == 1:
-            plt.tricontourf(xs,ys,fvar,**kwargs)
+            plt.tricontourf(xs, ys, fvar, **kwargs)
             plt.colorbar()
 
         plt.show()
