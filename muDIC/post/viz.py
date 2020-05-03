@@ -247,28 +247,40 @@ class Fields(object):
         return Green_strain
 
     @staticmethod
-    def _principal_strain_(G):
+    def _operate_in_eigen_space_(G,func=None):
+        if func is None:
+            func = lambda x :x
 
-
+        # In order to use the numpy builtins, we need to have the two axes of interest at the end of the array
         E_temp = np.moveaxis(G, 1, -1)
         E = np.moveaxis(E_temp, 1, -1)
 
-        eigvals, eigvecs = np.linalg.eig(E)
+        _, eigvecs = np.linalg.eig(E)
 
-
-
-        ld1 = np.sqrt(eigvals[:, :, :, :, 0])
-        ld2 = np.sqrt(eigvals[:, :, :, :, 1])
 
         ev1 = eigvecs[:, :, :, :, 0, 0]
         ev2 = eigvecs[:, :, :, :, 0, 1]
 
+        theta = -np.arctan(ev2/ev1)
 
-        ld = np.moveaxis(np.array([ld1, ld2]), 0, 1)
-        ev = np.moveaxis(np.array([ev1, ev2]), 0, 1)
+        R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+        G_temp = np.einsum('ijn...,njo...->noi...', R, G[:, :, :, :, :, :])
 
 
-        return ld, ev
+        G_principal = np.einsum('njo...,ijn...->nio...', G_temp, R)
+
+        G_principal[G_principal < 0.] = 0.
+        eps_princ = func(G_principal)
+
+        theta = -theta
+        R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+        eps_temp = np.einsum('ijn...,njo...->noi...', R, eps_princ)
+        eps= np.einsum('njo...,ijn...->nio...', eps_temp, R)
+
+
+
+
+        return eps
 
     @staticmethod
     def _polar_decomposition_(F):
