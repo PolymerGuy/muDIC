@@ -302,31 +302,35 @@ class Fields(object):
         :param E: Green Lagrange strain tensor E_ij on the form [nEl,i,j,...]
         :return: Engineering strain tensor eps_ij on the form [nEl,i,j,...]
         """
-
     #    # Find the stretch tensor
         # First, the Green deformation tensor "C²"
+        logger = logging.getLogger()
         G = 2.*E + np.eye(2)[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
-
-        try:
-            tan_2_theta = 2.0 * G[:,0,1,:,:,:]/(G[:,0,0,:,:,:]-G[:,1,1,:,:,:])
+        n_frames = G.shape[-1]
+        eps = np.zeros_like(G)
+        for i in range(n_frames):
+            #G = G[:,:,:,:,:,1:]
+            try:
+                tan_2_theta = 2.0 * G[:,0,1,:,:,i]/(G[:,0,0,:,:,i]-G[:,1,1,:,:,i])
+            except FloatingPointError:
+                tan_2_theta = np.zeros_like(G[:,0,1,:,:,i])
             theta = np.arctan(tan_2_theta) / 2.
+
+
             R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-            G_temp = np.einsum('ijn...,njo...->noi...', R, G)
+            G_temp = np.einsum('ijn...,njo...->noi...', R, G[:,:,:,:,:,i])
 
             G_principal = np.einsum('njo...,ijn...->nio...', G_temp, R)
 
             G_principal[G_principal < 0.] = 0.
-            eps = np.sqrt(G_principal) - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
+            eps_princ = np.sqrt(G_principal) - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis]
 
             theta = -np.arctan(tan_2_theta) / 2.
             R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-            eps_temp = np.einsum('ijn...,njo...->noi...', R, eps)
-            eps = np.einsum('njo...,ijn...->nio...', eps_temp, R)
-            return eps
-        except FloatingPointError:
-            # Principal directions are not defined "biaxial state"
-            eps = np.sqrt(G) - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
-            return eps
+            eps_temp = np.einsum('ijn...,njo...->noi...', R, eps_princ)
+            eps[:,:,:,:,:,i] = np.einsum('njo...,ijn...->nio...', eps_temp, R)
+        return eps
+
 
 
 
