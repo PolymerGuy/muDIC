@@ -255,30 +255,28 @@ class Fields(object):
         E_temp = np.moveaxis(G, 1, -1)
         E = np.moveaxis(E_temp, 1, -1)
 
-        _, eigvecs = np.linalg.eig(E)
+        eigvals, eigvecs = np.linalg.eig(E)
 
 
         ev1 = eigvecs[:, :, :, :, 0, 0]
         ev2 = eigvecs[:, :, :, :, 0, 1]
 
-        theta = -np.arctan(ev2/ev1)
+        ld1 = eigvals[:, :, :, :, 0]
+        ld2 = eigvals[:, :, :, :, 1]
 
-        R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-        G_temp = np.einsum('ijn...,njo...->noi...', R, G[:, :, :, :, :, :])
+        theta = np.arctan(ev2/ev1)
 
 
-        G_principal = np.einsum('njo...,ijn...->nio...', G_temp, R)
+        eps_princ = np.zeros_like(G)
 
-        G_principal[G_principal < 0.] = 0.
-        eps_princ = func(G_principal)
+        eps_princ[:,0,0,:,:,:] = func(ld1)
+        eps_princ[:,1,1,:,:,:] = func(ld2)
 
-        theta = -theta
+
+        theta = theta
         R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
         eps_temp = np.einsum('ijn...,njo...->noi...', R, eps_princ)
         eps= np.einsum('njo...,ijn...->nio...', eps_temp, R)
-
-
-
 
         return eps
 
