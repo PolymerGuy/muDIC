@@ -3,7 +3,7 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 
-from muDIC import Fields
+from .fields import Fields
 
 
 class Visualizer(object):
@@ -106,16 +106,3 @@ class Visualizer(object):
         plt.show()
 
 
-def ind_closest_below(value, list):
-    ind = 0
-    for i, num in enumerate(list):
-        if num < value:
-            ind = i
-
-    return ind
-
-
-def cross_correlation_products(field_a, field_b):
-    return np.sum(field_a * field_b) / (
-            (np.sum(np.square(field_a)) ** 0.5) * (
-            np.sum(np.square(field_b)) ** 0.5))

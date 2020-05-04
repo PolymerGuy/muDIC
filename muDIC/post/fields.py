@@ -4,7 +4,6 @@ import numpy as np
 from scipy.ndimage import map_coordinates
 
 from muDIC.elements import Q4
-from muDIC.post.viz import ind_closest_below, cross_correlation_products
 
 
 def makeFields(dic_results, seed=21, upscale=1, interpolation_order=1):
@@ -26,13 +25,12 @@ def makeFields(dic_results, seed=21, upscale=1, interpolation_order=1):
                     "the seed varialbe to set the number of gridpoints to be evaluated along each element "
                     "axis.")
 
-    ee, nn = __generate_grid__(seed,settings)
+    ee, nn = make_grid(seed, settings)
 
-    F, coords = _deformation_gradient_(res.xnodesT, res.ynodesT,
-                                       settings.mesh,
-                                       settings.mesh.element_def, nn,
-                                       ee)
-    U = _polar_decomposition_(F)
+    F, coords = defgrad_from_nodal_positions(res.xnodesT, res.ynodesT,
+                                             settings.mesh,
+                                             settings.mesh.element_def, nn,
+                                             ee)
 
     # To make the result formatting consistent across element formulations, we arrange the elements onto a grid
     # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
@@ -92,10 +90,10 @@ def makeFields(dic_results, seed=21, upscale=1, interpolation_order=1):
         coords = coords3
         F = F3
 
-    return Fields(F, U, coords)
+    return Fields(F, coords)
 
 
-def __generate_grid__(seed,settings):
+def make_grid(seed, settings):
     # TODO: Remove hack:
     if seed == 1:
         return np.meshgrid(np.array([0.5]),
@@ -121,7 +119,7 @@ def __generate_grid__(seed,settings):
             return np.meshgrid(mids_n, mids_e)
 
 
-def _deformation_gradient_(xnodesT, ynodesT, msh, elm, e, n):
+def defgrad_from_nodal_positions(xnodesT, ynodesT, msh, elm, e, n):
     """
     Calculate the deformation gradient from the control point positions
     and the element definitions.
@@ -184,7 +182,7 @@ def _deformation_gradient_(xnodesT, ynodesT, msh, elm, e, n):
     return np.array(Fstack), np.array(coord_stack)
 
 
-def _polar_decomposition_(F):
+def polar_decomposition(F):
     """
     Perform polar decomposition of F by assuming that F = RU and finding the principal
     values of F^T * F and taking the square root to find U
@@ -193,15 +191,14 @@ def _polar_decomposition_(F):
     """
     # Find principal direction directly exploiting that F^t F is symmetric
     G = np.einsum('nji...,njo...->nio...', F, F)
-    U = Fields._apply_func_in_eigen_space_(G, np.sqrt)
+    U = apply_func_in_eigen_space(G, np.sqrt)
 
     # TODO: Add R to the output
     return U
 
 
 class Fields(object):
-    # TODO: Remove Q4 argument. This should be detected automaticaly
-    def __init__(self, F, U, coords):
+    def __init__(self, F,coords):
         """
         Fields calculates field variables from the DIC-results.
         The implementation is lazy, hence getter methods have to be used.
@@ -232,40 +229,8 @@ class Fields(object):
 
         self.__F__ = F
         self.__coords__ = coords
-        self.__U__ = U
+        self.__U__ = polar_decomposition(F)
 
-    @staticmethod
-    def _apply_func_in_eigen_space_(array, func=None):
-        """
-
-        Parameters
-        ----------
-        array
-        func
-
-        Returns
-        -------
-
-        """
-        if func is None:
-            func = lambda x: x
-
-        # In order to use the numpy.eig, we need to have the two axes of interest at the end of the array
-        E = np.moveaxis(np.moveaxis(array, 1, -1), 1, -1)
-
-        eigvals, eigvecs = np.linalg.eig(E)
-
-        theta = np.arctan(eigvecs[:, :, :, :, 0, 1] / eigvecs[:, :, :, :, 0, 0])
-
-        array_princ = np.zeros_like(array)
-
-        array_princ[:, 0, 0, :, :, :] = func(eigvals[:, :, :, :, 0])
-        array_princ[:, 1, 1, :, :, :] = func(eigvals[:, :, :, :, 1])
-
-        R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-        func_array_temp = np.einsum('ijn...,njo...->noi...', R, array_princ)
-        func_array = np.einsum('njo...,ijn...->nio...', func_array_temp, R)
-        return func_array
 
     def true_strain(self):
         """
@@ -274,10 +239,10 @@ class Fields(object):
         :param eps: Engineering strain tensor eps_ij on the form [nEl,i,j,...]
         :return: True strain tensor teps_ij on the form [nEl,i,j,...]
         """
-        return Fields._apply_func_in_eigen_space_(self.__U__, func=np.log)
+        return apply_func_in_eigen_space(self.__U__, func=np.log)
 
     def eng_strain(self):
-        return Fields._apply_func_in_eigen_space_(self.__U__, func=lambda x: x - 1.0)
+        return apply_func_in_eigen_space(self.__U__, func=lambda x: x - 1.0)
 
     def F(self):
         return self.__F__
@@ -290,7 +255,7 @@ class Fields(object):
         """
 
         # Calculate green strain tensor as 0.5(F^T * F - I)
-        return 0.5 * (self.__U__ - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
+        return 0.5 * (apply_func_in_eigen_space(self.__U__,func=np.square) - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
 
     def coords(self):
         return self.__coords__
@@ -315,3 +280,51 @@ class Fields(object):
         ref_id = ind_closest_below(frame_id, [ref.image_id for ref in self.__res__.reference])
         ref = self.__res__.reference[ref_id]
         return ref.e, ref.n
+
+
+def apply_func_in_eigen_space(array, func=None):
+    """
+
+    Parameters
+    ----------
+    array
+    func
+
+    Returns
+    -------
+
+    """
+    if func is None:
+        func = lambda x: x
+
+    # In order to use the numpy.eig, we need to have the two axes of interest at the end of the array
+    E = np.moveaxis(np.moveaxis(array, 1, -1), 1, -1)
+
+    eigvals, eigvecs = np.linalg.eig(E)
+
+    theta = np.arctan(eigvecs[:, :, :, :, 0, 1] / eigvecs[:, :, :, :, 0, 0])
+
+    array_princ = np.zeros_like(array)
+
+    array_princ[:, 0, 0, :, :, :] = func(eigvals[:, :, :, :, 0])
+    array_princ[:, 1, 1, :, :, :] = func(eigvals[:, :, :, :, 1])
+
+    R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+    func_array_temp = np.einsum('ijn...,njo...->noi...', R, array_princ)
+    func_array = np.einsum('njo...,ijn...->nio...', func_array_temp, R)
+    return func_array
+
+
+def ind_closest_below(value, list):
+    ind = 0
+    for i, num in enumerate(list):
+        if num < value:
+            ind = i
+
+    return ind
+
+
+def cross_correlation_products(field_a, field_b):
+    return np.sum(field_a * field_b) / (
+            (np.sum(np.square(field_a)) ** 0.5) * (
+            np.sum(np.square(field_b)) ** 0.5))

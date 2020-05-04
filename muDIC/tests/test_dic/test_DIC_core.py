@@ -4,6 +4,7 @@ from unittest import TestCase
 import numpy as np
 
 import muDIC as dic
+import muDIC.post.fields
 import muDIC.solver.correlate
 from muDIC import vlab
 from muDIC.vlab import SyntheticImageGenerator
@@ -72,7 +73,7 @@ class TestFullDICCore(TestCase):
         if n_frames != n_frames_dic:
             return False
 
-        results = dic.Fields(dic_results, seed=21)
+        results = muDIC.post.fields.Fields(dic_results, seed=21)
 
         max_error, mean_error = self.__calculate_DIC_error__(F, results.F())
 

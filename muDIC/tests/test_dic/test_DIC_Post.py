@@ -36,8 +36,9 @@ class TestDIC_Post(TestCase):
         # Calculate green strain tensor as 0.5(F^T * F - I)
         Green_strain = 0.5 * (Green_deformation - I[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
 
+        fields = Fields(F,None)
         # Green strain to be tested
-        G = Fields._green_strain_(F)
+        G = fields.green_strain()
         print(F.shape)
         print(G.shape)
 
@@ -64,7 +65,8 @@ class TestDIC_Post(TestCase):
         F = F[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
 
         # Green strain to be tested
-        G = Fields._green_strain_(F)
+        fields = Fields(F,None)
+        G = fields.green_strain()
 
         # Determine absolute error
         deviation = np.abs(green_strain - G)
@@ -82,17 +84,16 @@ class TestDIC_Post(TestCase):
         # Generate random numbers in [0.5,1.5]
         rand_nrs = (np.random.random_sample(2500)) + 0.5
         # Format as [nEl,i,j,...]
-        F = np.reshape(rand_nrs, (5, 2, 2, 5, 5, 5))
-
         theta = np.pi/5 * 0.
         R = np.array([[np.cos(theta),np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
         U = np.array([[1.5,0.0000],[0.,-0.5]])
         F = R.dot(U)
         F = F[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
 
-        green_strain = Fields._green_strain_(F)
+        fields = Fields(F,None)
+        green_strain = fields.green_strain()
 
-        eng_strain = Fields._engineering_strain_(green_strain)
+        eng_strain = fields.eng_strain()
 
         # Calculate green strain from engineering strain
         E11 = 0.5 * ((eng_strain[:, 0, 0, :, :, :] + 1.) ** 2. - 1.)
@@ -123,11 +124,10 @@ class TestDIC_Post(TestCase):
 
         F_stack = np.ones((5, 2, 2, 5, 5, 2)) * F[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
-        E = Fields._green_strain_(F_stack)
+        fields = Fields(F_stack,None)
 
-        eng_strain = Fields._engineering_strain_(E)
+        eng_strain = fields.eng_strain()
 
-        eng_strain - (F - np.eye(2))[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
         # Determine absolute error
         deviation = np.abs(eng_strain - (F - np.eye(2))[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
@@ -148,9 +148,10 @@ class TestDIC_Post(TestCase):
 
         F_stack = np.ones((5, 2, 2, 5, 5, 2)) * F[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
-        E = Fields._green_strain_(F_stack)
+        fields = Fields(F_stack,None)
+        E = fields.green_strain()
 
-        eng_strain = Fields._engineering_strain_(E)
+        eng_strain = fields.eng_strain()
 
         deviation = eng_strain
 
@@ -178,9 +179,10 @@ class TestDIC_Post(TestCase):
 
         F_stack = np.ones((5, 2, 2, 5, 5, 2)) * F[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
-        E = Fields._green_strain_(F_stack)
+        fields = Fields(F_stack,None)
+        E = fields.green_strain()
 
-        eng_strain = Fields._engineering_strain_(E)
+        eng_strain = fields.eng_strain()
         eng_strain_right = np.zeros_like(eng_strain)
         eng_strain_right[:,0,0,:,:,:] = 0.5
 
@@ -200,11 +202,9 @@ class TestDIC_Post(TestCase):
 
         F_stack = np.ones((5, 2, 2, 5, 5, 2)) * F[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
-        E = Fields._green_strain_(F_stack)
+        fields = Fields(F_stack,None)
 
-        eng_strain = Fields._engineering_strain_(E)
-
-        eng_strain - (F - np.eye(2))[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
+        eng_strain = fields.eng_strain()
 
         # Determine absolute error
         deviation = np.abs(eng_strain - (F - np.eye(2))[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
@@ -222,9 +222,11 @@ class TestDIC_Post(TestCase):
 
         F_shear_stack = np.ones((5, 2, 2, 5, 5, 2)) * F_shear[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
-        E_shear = Fields._green_strain_(F_shear_stack)
+        fields = Fields(F_shear_stack,None)
 
-        eng_strain_shear = Fields._engineering_strain_(E_shear)
+        E_shear = fields.green_strain()
+
+        eng_strain_shear = fields.eng_strain()
 
         # Rotate to tension-compression orientation
         alpha = np.pi / 4.
@@ -233,10 +235,11 @@ class TestDIC_Post(TestCase):
         F_tc = np.dot(R.transpose(), np.dot(F_shear, R))
 
         F_tc_stack = np.ones((5, 2, 2, 5, 5, 2)) * F_tc[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
+        fields_tc = Fields(F_tc_stack,None)
 
-        E_tc = Fields._green_strain_(F_tc_stack)
+        E_tc = fields_tc.green_strain()
 
-        eng_strain_tc = Fields._engineering_strain_(E_tc)
+        eng_strain_tc = fields_tc.eng_strain()
 
         # Rotate back to pure shear
         alpha = -np.pi / 4.
