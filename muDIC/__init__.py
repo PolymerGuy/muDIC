@@ -1,6 +1,7 @@
 name = "muDIC"
 from .solver import DICInput
-from muDIC.post.viz import Fields, Visualizer
+from muDIC.post.viz import Visualizer
+from .post import Fields
 from muDIC.solver.correlate import DICInput, DICOutput
 from . import IO
 from . import elements
