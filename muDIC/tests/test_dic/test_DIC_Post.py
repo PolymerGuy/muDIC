@@ -9,16 +9,16 @@ class TestDIC_Post(TestCase):
     def test__true_strain_(self):
         # Tolerance
         toll = 1e-7
-        # Generate random numbers in [-0.99,4.]
-        rand_nrs = 5. * (np.random.random_sample(1000)) - 0.99
+        rand_nrs = (np.random.random_sample(1000)) + 0.5
+
         # Format as [nEl,i,j,...]
-        eng_strain = np.reshape(rand_nrs, (5, 2, 2, -1))
+        F = np.reshape(rand_nrs, (5, 2, 2, 5, 5, 2))
         # Calculate true strain
-        true_strain = Fields._true_strain_(eng_strain)
+        U = Fields._polar_decomposition_(F)
+
+        true_strain = Fields._true_strain_(U)
         # Determine absolute error
-        deviation = np.abs(np.log(eng_strain + 1.) - true_strain)
-        # Pass if all elements are within tolerance
-        self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
+        self.fail()
 
     def test_green_strain_(self):
         # Tolerance

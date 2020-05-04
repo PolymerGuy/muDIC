@@ -7,6 +7,97 @@ from muDIC.elements.b_splines import BSplineSurface
 from muDIC.elements.q4 import Q4
 
 
+
+def makeFields(dic_results, seed=21, upscale=1, interpolation_order=1):
+    self.logger = logging.getLogger()
+
+    # The type is implicitly checked by using the interface
+    self.__res__ = dic_results
+    self.__settings__ = dic_results.settings
+    self.interpolation_order = interpolation_order
+
+    if isinstance(self.__settings__.mesh.element_def, Q4):
+        q4 = True
+        seed = 1
+        self.logger.info("Post processing results from Q4 elements. The seed variable is ignored and the values "
+                         "are extracted at the element centers. Use the upscale value to get interpolated fields.")
+    else:
+        q4 = False
+        self.logger.info("Post processing results from B-spline elements. The upscale variable is ignored. Use "
+                         "the seed varialbe to set the number of gridpoints to be evaluated along each element "
+                         "axis.")
+
+    self.__ee__, self.__nn__ = self.__generate_grid__(seed)
+
+    self.__F__, self.__coords__ = self._deformation_gradient_(self.__res__.xnodesT, self.__res__.ynodesT,
+                                                              self.__settings__.mesh,
+                                                              self.__settings__.mesh.element_def, self.__nn__,
+                                                              self.__ee__)
+    self.__U__ = self._polar_decomposition_(self.__F__)
+
+    # To make the result formatting consistent across element formulations, we arrange the elements onto a grid
+    # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
+    # by using 3rd order spline interpolation.
+    n_frames = self.__F__.shape[-1]
+
+    if q4:
+        # Flatten things form multiple elements to a grid of elements
+        grid_shape = (self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx)
+        n_frames = self.__F__.shape[-1]
+        self.__F2__ = np.zeros(
+            (1, 2, 2, self.__settings__.mesh.n_elx, self.__settings__.mesh.n_ely, self.__F__.shape[-1]))
+        for i in range(2):
+            for j in range(2):
+                for t in range(n_frames):
+                    self.__F2__[0, i, j, :, :, t] = self.__F__[:, i, j, 0, 0, t].reshape(grid_shape).transpose()
+
+        self.__coords2__ = np.zeros(
+            (1, 2, self.__settings__.mesh.n_elx, self.__settings__.mesh.n_ely, self.__F__.shape[-1]))
+        for i in range(2):
+            for t in range(n_frames):
+                self.__coords2__[0, i, :, :, t] = self.__coords__[:, i, 0, 0, t].reshape(grid_shape).transpose()
+
+        # Overwrite the old results
+        # TODO: Remove overwriting results as this is a painfully non-functional thing to do...
+        self.__coords__ = self.__coords2__
+        self.__F__ = self.__F2__
+
+        self.__coords__ = self.__coords2__
+        self.__F__ = self.__F2__
+
+    if upscale != 1.:
+        elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, self.__coords__.shape[-3] - 1, 1. / upscale),
+                                               np.arange(0, self.__coords__.shape[-2] - 1, 1. / upscale))
+
+        self.__F3__ = np.zeros(
+            (1, 2, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
+
+        self.__coords3__ = np.zeros(
+            (1, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], self.__F__.shape[-1]))
+
+        for i in range(2):
+            for t in range(n_frames):
+                self.__coords3__[0, i, :, :, t] = map_coordinates(self.__coords__[0, i, :, :, t],
+                                                                  [elms_y_fine.flatten(),
+                                                                   elms_x_fine.flatten()],
+                                                                  order=self.interpolation_order).reshape(
+                    elms_x_fine.shape).transpose()
+
+        for i in range(2):
+            for j in range(2):
+                for t in range(n_frames):
+                    self.__F3__[0, i, j, :, :, t] = map_coordinates(self.__F__[0, i, j, :, :, t],
+                                                                    [elms_y_fine.flatten(),
+                                                                     elms_x_fine.flatten()],
+                                                                    order=self.interpolation_order).reshape(
+                        elms_x_fine.shape).transpose()
+
+        self.__coords__ = self.__coords3__
+        self.__F__ = self.__F3__
+
+    return Fields()
+
+
 class Fields(object):
     # TODO: Remove Q4 argument. This should be detected automaticaly
     def __init__(self, dic_results, seed=21, upscale=1, interpolation_order=1):
@@ -60,6 +151,8 @@ class Fields(object):
                                                                   self.__settings__.mesh,
                                                                   self.__settings__.mesh.element_def, self.__nn__,
                                                                   self.__ee__)
+        self.__U__ = self._polar_decomposition_(self.__F__)
+
 
         # To make the result formatting consistent across element formulations, we arrange the elements onto a grid
         # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
@@ -210,32 +303,7 @@ class Fields(object):
 
         return np.array(Fstack), np.array(coord_stack)
 
-    @staticmethod
-    def _green_deformation_(F):
-        """
-        Calculate Green deformation tensor from deformation as G = F^T * F
-        :param F:
-        :return:
-        """
-        return np.einsum('nji...,njo...->nio...', F, F)
 
-
-    @staticmethod
-    def _green_strain_(F):
-        """
-        Calculate Green strain tensor from F as G = 0.5*(F^T * F -I)
-        :param F: Deformation gradient tensor F_ij on the form [nEl,i,j,...]
-        :return: Green Lagrange strain tensor E_ij on the form [nEl,i,j,...]
-        """
-
-        green_deformation = np.einsum('nji...,njo...->nio...', F, F)
-
-        I = np.eye(2, dtype=np.float)
-
-        # Calculate green strain tensor as 0.5(F^T * F - I)
-        green_strain = 0.5 * (green_deformation - I[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
-
-        return green_strain
 
     @staticmethod
     def _apply_func_in_eigen_space_(array, func=None):
@@ -253,29 +321,22 @@ class Fields(object):
         if func is None:
             func = lambda x: x
 
-        # In order to use the numpy builtins, we need to have the two axes of interest at the end of the array
+        # In order to use the numpy.eig, we need to have the two axes of interest at the end of the array
         E = np.moveaxis(np.moveaxis(array, 1, -1), 1, -1)
 
         eigvals, eigvecs = np.linalg.eig(E)
 
-        ev1 = eigvecs[:, :, :, :, 0, 0]
-        ev2 = eigvecs[:, :, :, :, 0, 1]
+        theta = np.arctan(eigvecs[:, :, :, :, 0, 1] / eigvecs[:, :, :, :, 0, 0])
 
-        ld1 = eigvals[:, :, :, :, 0]
-        ld2 = eigvals[:, :, :, :, 1]
+        array_princ = np.zeros_like(array)
 
-        theta = np.arctan(ev2 / ev1)
-
-        arr_princ = np.zeros_like(array)
-
-        arr_princ[:, 0, 0, :, :, :] = func(ld1)
-        arr_princ[:, 1, 1, :, :, :] = func(ld2)
+        array_princ[:, 0, 0, :, :, :] = func(eigvals[:, :, :, :, 0])
+        array_princ[:, 1, 1, :, :, :] = func(eigvals[:, :, :, :, 1])
 
         R = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-        eps_temp = np.einsum('ijn...,njo...->noi...', R, arr_princ)
-        eps = np.einsum('njo...,ijn...->nio...', eps_temp, R)
-
-        return eps
+        func_array_temp = np.einsum('ijn...,njo...->noi...', R, array_princ)
+        func_array = np.einsum('njo...,ijn...->nio...', func_array_temp, R)
+        return func_array
 
     @staticmethod
     def _polar_decomposition_(F):
@@ -292,47 +353,30 @@ class Fields(object):
         # TODO: Add R to the output
         return U
 
-    @staticmethod
-    def _engineering_strain_(E):
-        """
-        Calculate engineering strain from Green Lagrange strain tensor E_ij as:
-        eps_ii = sqrt(1+E_ii)-1 and
-        gamma_ij = 2E_ij/sqrt((1+E_ii)*(1+E_jj))
-        :param E: Green Lagrange strain tensor E_ij on the form [nEl,i,j,...]
-        :return: Engineering strain tensor eps_ij on the form [nEl,i,j,...]
-        """
-        #    # Find the stretch tensor
-        # First, the Green deformation tensor "C²"
-        logger = logging.getLogger()
-        G = 2. * E + np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
-        eps = Fields._apply_func_in_eigen_space_(G,func=lambda x:np.sqrt(x)-1.0)
-
-        return eps
-
-    @staticmethod
-    def _true_strain_(eps):
+    def true_strain(self):
         """
         Calculate true strain tensor teps_ij from engineering strain tensor eps_ij as:
         teps_ij = log(eps_ij+1)
         :param eps: Engineering strain tensor eps_ij on the form [nEl,i,j,...]
         :return: True strain tensor teps_ij on the form [nEl,i,j,...]
         """
-        return np.log(eps + 1.)
-
-    def true_strain(self):
-        E = self._green_strain_(self.__F__)
-        engineering_strains = self._engineering_strain_(E)
-        return self._true_strain_(engineering_strains)
+        return Fields._apply_func_in_eigen_space_(self.__U__,func=np.log)
 
     def eng_strain(self):
-        E = self._green_strain_(self.__F__)
-        return self._engineering_strain_(E)
+        return Fields._apply_func_in_eigen_space_(self.__U__,func=lambda x:x-1.0)
 
     def F(self):
         return self.__F__
 
     def green_strain(self):
-        return self._green_strain_(self.__F__)
+        """
+        Calculate Green strain tensor from F as G = 0.5*(F^T * F -I)
+        :param F: Deformation gradient tensor F_ij on the form [nEl,i,j,...]
+        :return: Green Lagrange strain tensor E_ij on the form [nEl,i,j,...]
+        """
+
+        # Calculate green strain tensor as 0.5(F^T * F - I)
+        return 0.5 * (self.__U__ - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
 
     def coords(self):
         return self.__coords__
