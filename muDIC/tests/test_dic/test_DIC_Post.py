@@ -136,7 +136,7 @@ class TestDIC_Post(TestCase):
 
     def test_pure_rotation_(self):
         """
-        Pure rotation should not induce spurious strains!
+        Pure rotation should not induce spurious strains
         :return:
         """
         # Tolerance
@@ -149,46 +149,67 @@ class TestDIC_Post(TestCase):
         F_stack = np.ones((5, 2, 2, 5, 5, 2)) * F[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
         fields = Fields(F_stack,None)
-        E = fields.green_strain()
 
         eng_strain = fields.eng_strain()
-
-        deviation = eng_strain
-
-        # Determine absolute error
-        #self.assertEqual(eng_strain,np.zeros_like(eng_strain))
-
-        self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
+        green_strain = fields.green_strain()
+        true_strain = fields.true_strain()
 
 
+        self.assertEqual(True, all([dev < toll for dev in eng_strain.flatten()]))
+        self.assertEqual(True, all([dev < toll for dev in green_strain.flatten()]))
+        self.assertEqual(True, all([dev < toll for dev in true_strain.flatten()]))
 
-    def test_pure_tension_rotation_(self):
+
+
+    def test_tension_rotation_(self):
         """
-        Stretch along x, rotate so that its aligned along y
+        Stretch along the x-axis, rotate so that its aligned along y.
+        Should still only give a strain component along x.
+
+        This holds for true strain, engineering strain and green strain
+
+        The deformation gradient is assembled as F=RU where U_11 is defined and R corresponds to a 90deg rotation.
+
+        It is checked that:
+        eng_strain_11 = U_11 -1
+        true_strain_11 = log(U_11)
+        green_strain_11 = 0.5(U_11^2 -1)
         :return:
         """
         # Tolerance
         toll = 1e-7
 
-        # Deformation gradient
+        # The deformation gradient is calculated as F=RU
+        stretch = 1.5
         theta = np.pi/2.
         R = np.array([[np.cos(theta),np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-        U = np.array([[1.5,0],[0,1.]])
+        U = np.array([[stretch,0],[0,1.]])
         F = R.dot(U)
-        print(F)
-
+        # We need to have the right formatting
         F_stack = np.ones((5, 2, 2, 5, 5, 2)) * F[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
         fields = Fields(F_stack,None)
-        E = fields.green_strain()
 
         eng_strain = fields.eng_strain()
-        eng_strain_right = np.zeros_like(eng_strain)
-        eng_strain_right[:,0,0,:,:,:] = 0.5
+        eng_strain_correct = np.zeros_like(eng_strain)
+        eng_strain_correct[:,0,0,:,:,:] = stretch-1.0
+        deviation_eng_strain = np.abs(eng_strain-eng_strain_correct)
+        self.assertEqual(True, all([dev < toll for dev in deviation_eng_strain.flatten()]))
 
-        deviation = np.abs(eng_strain-eng_strain_right)
 
-        self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
+        true_strain = fields.true_strain()
+        true_strain_correct = np.zeros_like(true_strain)
+        true_strain_correct[:,0,0,:,:,:] = np.log(stretch)
+        deviation_true_strain = np.abs(true_strain-true_strain_correct)
+        self.assertEqual(True, all([dev < toll for dev in deviation_true_strain.flatten()]))
+
+
+        green_strain = fields.green_strain()
+        green_strain_correct = np.zeros_like(true_strain)
+        green_strain_correct[:,0,0,:,:,:] = 0.5 * (stretch**2.-1.)
+        deviation_green_strain = np.abs(green_strain-green_strain_correct)
+        self.assertEqual(True, all([dev < toll for dev in deviation_green_strain.flatten()]))
+
 
 
 
