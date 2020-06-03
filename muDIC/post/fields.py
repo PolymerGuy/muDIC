@@ -14,7 +14,9 @@ def makeFields(dic_results, seed=21, upscale=1, interpolation_order=1):
     settings = dic_results.settings
     interpolation_order = interpolation_order
 
+
     if isinstance(settings.mesh.element_def, Q4):
+        # TODO: Allow for custom seeds to be used for Q4 also
         q4 = True
         seed = 1
         logger.info("Post processing results from Q4 elements. The seed variable is ignored and the values "
@@ -37,6 +39,7 @@ def makeFields(dic_results, seed=21, upscale=1, interpolation_order=1):
     # by using 3rd order spline interpolation.
     n_frames = F.shape[-1]
 
+    # TODO: Refactor into functions and simplify
     if q4:
         # Flatten things form multiple elements to a grid of elements
         grid_shape = (settings.mesh.n_ely, settings.mesh.n_elx)
