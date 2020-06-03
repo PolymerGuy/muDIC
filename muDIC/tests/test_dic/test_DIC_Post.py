@@ -49,7 +49,74 @@ class TestDIC_Post(TestCase):
 
         self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
 
-    def test_green_strain_shear(self):
+    def test_simple_shear(self):
+        """
+       Simple shear test
+
+       Tested for true strain, engineering strain and green strain
+
+        NOTE THAT THIS ONLY FOLDS FOR VERY SMALL SHEAR STRAINS
+
+       It is checked that:
+       eng_strain_11 = U_11 -1
+       true_strain_11 = log(U_11)
+       green_strain_11 = 0.5(U_11^2 -1)
+       """
+        # Tolerance
+        toll = 1e-7
+        # Generate random numbers in [0.5,1.5]
+
+        a = 0.0002
+
+        # Format as [nEl,i,j,...]
+        F = np.array([[1,a],[0,1]])
+        # Calculate green deformation as F^T*F
+
+        F = F[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
+
+
+        fields = Fields(F,None)
+
+
+
+        eng_strain = fields.eng_strain()
+        print(eng_strain[0,:,:,0,0,-1])
+        eng_strain_correct = np.zeros_like(eng_strain)
+        eng_strain_correct[:, 0, 1, :, :, :] = 0.5*a
+        eng_strain_correct[:, 1, 0, :, :, :] = 0.5*a
+        deviation = np.abs(eng_strain_correct - eng_strain)
+        self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
+
+        true_strain = fields.true_strain()
+        print(np.exp(true_strain.max()))
+        true_strain_correct = np.zeros_like(true_strain)
+        true_strain_correct[:, 0, 1, :, :, :] = 0.5 * np.log(1. + a)
+        true_strain_correct[:, 1, 0, :, :, :] = 0.5 * np.log(1. + a)
+        deviation = np.abs(true_strain_correct - true_strain)
+        self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
+
+
+
+
+        green_strain = fields.green_strain()
+        print(green_strain.max())
+
+        # By hand calculation this should give
+        green_strain_correct = 0.5 * np.array([[a**2,a],[a,0]])[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
+        deviation = np.abs(green_strain_correct - green_strain)
+        self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
+
+    def test_pure_shear(self):
+        """
+       Pure shear test
+
+       Tested for true strain, engineering strain and green strain
+
+       It is checked that:
+       eng_strain_11 = U_11 -1
+       true_strain_11 = log(U_11)
+       green_strain_11 = 0.5(U_11^2 -1)
+       """
         # Tolerance
         toll = 1e-7
         # Generate random numbers in [0.5,1.5]
@@ -57,26 +124,36 @@ class TestDIC_Post(TestCase):
         a = 0.2
 
         # Format as [nEl,i,j,...]
-        F = np.array([[1,0],[a,1]])
-        # By hand calculation this should give
-        green_strain = 0.5 * np.array([[a**2,a],[a,0]])[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
+        F = np.array([[1, a], [a, 1]])
         # Calculate green deformation as F^T*F
 
-        F = F[np.newaxis,:,:,np.newaxis,np.newaxis,np.newaxis]
+        F = F[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
-        # Green strain to be tested
-        fields = Fields(F,None)
-        G = fields.green_strain()
+        fields = Fields(F, None)
 
-        # Determine absolute error
-        deviation = np.abs(green_strain - G)
-        print("Deviation is:",deviation)
-        print(green_strain[0,:,:,0,0,0])
-        print(G[0,:,:,0,0,0])
-
+        eng_strain = fields.eng_strain()
+        eng_strain_correct = np.zeros_like(eng_strain)
+        eng_strain_correct[:, 0, 1, :, :, :] = a
+        eng_strain_correct[:, 1, 0, :, :, :] = a
+        deviation = np.abs(eng_strain_correct - eng_strain)
         self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
 
+        true_strain = fields.true_strain()
+        print(np.exp(true_strain.max()))
+        true_strain_correct = np.zeros_like(true_strain)
+        true_strain_correct[:, 0, 1, :, :, :] = np.log(1. + a)
+        true_strain_correct[:, 1, 0, :, :, :] = np.log(1. + a)
+        deviation = np.abs(true_strain_correct - true_strain)
+        self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
 
+        green_strain = fields.green_strain()
+        print(green_strain.max())
+
+        # By hand calculation this should give
+        green_strain_correct = 0.5 * np.array([[a ** 2, a], [a, 0]])[np.newaxis, :, :, np.newaxis, np.newaxis,
+                                     np.newaxis]
+        deviation = np.abs(green_strain_correct - green_strain)
+        self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
 
     def test_engineering_strain_(self):
         # Tolerance
@@ -116,28 +193,51 @@ class TestDIC_Post(TestCase):
         self.assertEqual(True, all([dev < toll for dev in deviation22.flatten()]))
 
     def test_uniaxial_tension_(self):
+        """
+         Stretch along the x-axis
+
+         This holds for true strain, engineering strain and green strain
+
+         It is checked that:
+         eng_strain_11 = U_11 -1
+         true_strain_11 = log(U_11)
+         green_strain_11 = 0.5(U_11^2 -1)
+         """
+
         # Tolerance
         toll = 1e-7
 
         # Deformation gradient
-        F = np.array([[1.1, 0.], [0., 1.]])
+        stretch = 1.1
+        F = np.array([[stretch, 0.], [0., 1.]])
 
         F_stack = np.ones((5, 2, 2, 5, 5, 2)) * F[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis]
 
         fields = Fields(F_stack,None)
 
         eng_strain = fields.eng_strain()
+        eng_strain_correct = np.zeros_like(eng_strain)
+        eng_strain_correct[:, 0, 0, :, :, :] = stretch - 1.0
+        deviation_eng_strain = np.abs(eng_strain - eng_strain_correct)
+        self.assertEqual(True, all([dev < toll for dev in deviation_eng_strain.flatten()]))
+
+        true_strain = fields.true_strain()
+        true_strain_correct = np.zeros_like(true_strain)
+        true_strain_correct[:, 0, 0, :, :, :] = np.log(stretch)
+        deviation_true_strain = np.abs(true_strain - true_strain_correct)
+        self.assertEqual(True, all([dev < toll for dev in deviation_true_strain.flatten()]))
+
+        green_strain = fields.green_strain()
+        green_strain_correct = np.zeros_like(true_strain)
+        green_strain_correct[:, 0, 0, :, :, :] = 0.5 * (stretch ** 2. - 1.)
+        deviation_green_strain = np.abs(green_strain - green_strain_correct)
+        self.assertEqual(True, all([dev < toll for dev in deviation_green_strain.flatten()]))
 
 
-        # Determine absolute error
-        deviation = np.abs(eng_strain - (F - np.eye(2))[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
-
-        self.assertEqual(True, all([dev < toll for dev in deviation.flatten()]))
-
-    def test_pure_rotation_(self):
+    def test_rotation_(self):
         """
         Pure rotation should not induce spurious strains
-        :return:
+        This holds for true strain, engineering strain and green strain
         """
         # Tolerance
         toll = 1e-7
@@ -150,14 +250,17 @@ class TestDIC_Post(TestCase):
 
         fields = Fields(F_stack,None)
 
+        # Should only contain zeros
         eng_strain = fields.eng_strain()
-        green_strain = fields.green_strain()
-        true_strain = fields.true_strain()
-
-
         self.assertEqual(True, all([dev < toll for dev in eng_strain.flatten()]))
-        self.assertEqual(True, all([dev < toll for dev in green_strain.flatten()]))
+
+        true_strain = fields.true_strain()
         self.assertEqual(True, all([dev < toll for dev in true_strain.flatten()]))
+
+        green_strain = fields.green_strain()
+        self.assertEqual(True, all([dev < toll for dev in green_strain.flatten()]))
+
+
 
 
 
@@ -174,7 +277,6 @@ class TestDIC_Post(TestCase):
         eng_strain_11 = U_11 -1
         true_strain_11 = log(U_11)
         green_strain_11 = 0.5(U_11^2 -1)
-        :return:
         """
         # Tolerance
         toll = 1e-7
