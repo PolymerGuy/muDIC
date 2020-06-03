@@ -6,30 +6,89 @@ from scipy.ndimage import map_coordinates
 from muDIC.elements import Q4
 
 
-def makeFields(dic_results, seed=21, upscale=1, interpolation_order=1):
+def reshape_elemets_into_mesh(F, coords, settings):
+    # TODO: Refactor into functions and simplify
+    # Flatten things form multiple elements to a grid of elements
+    grid_shape = (settings.mesh.n_ely, settings.mesh.n_elx)
+    n_frames = F.shape[-1]
+    F2 = np.zeros(
+        (1, 2, 2, settings.mesh.n_elx, settings.mesh.n_ely, F.shape[-1]))
+    for i in range(2):
+        for j in range(2):
+            for t in range(n_frames):
+                F2[0, i, j, :, :, t] = F[:, i, j, 0, 0, t].reshape(grid_shape).transpose()
+
+    coords2 = np.zeros(
+        (1, 2, settings.mesh.n_elx, settings.mesh.n_ely, F.shape[-1]))
+    for i in range(2):
+        for t in range(n_frames):
+            coords2[0, i, :, :, t] = coords[:, i, 0, 0, t].reshape(grid_shape).transpose()
+
+    # Overwrite the old results
+    # TODO: Remove overwriting results as this is a painfully non-functional thing to do...
+
+    return F2, coords2
+
+
+def upsample_mesh(F, coords, upscale,interpolation_order):
+    # TODO: This is broken as upscale=1 looses one row and column!
+    n_frames = F.shape[-1]
+    elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, coords.shape[-3] - 1, 1. / upscale),
+                                           np.arange(0, coords.shape[-2] - 1, 1. / upscale))
+
+    F3 = np.zeros(
+        (1, 2, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], F.shape[-1]))
+
+    coords3 = np.zeros(
+        (1, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], F.shape[-1]))
+
+    for i in range(2):
+        for t in range(n_frames):
+            coords3[0, i, :, :, t] = map_coordinates(coords[0, i, :, :, t],
+                                                     [elms_y_fine.flatten(),
+                                                      elms_x_fine.flatten()],
+                                                     order=interpolation_order).reshape(
+                elms_x_fine.shape).transpose()
+
+    for i in range(2):
+        for j in range(2):
+            for t in range(n_frames):
+                F3[0, i, j, :, :, t] = map_coordinates(F[0, i, j, :, :, t],
+                                                       [elms_y_fine.flatten(),
+                                                        elms_x_fine.flatten()],
+                                                       order=interpolation_order).reshape(
+                    elms_x_fine.shape).transpose()
+
+    return F3, coords3
+
+
+
+
+def makeFields(dic_results, seed=None, upscale=1, interpolation_order=1):
     logger = logging.getLogger()
 
     # The type is implicitly checked by using the interface
-    res = dic_results
     settings = dic_results.settings
-    interpolation_order = interpolation_order
+
+    if seed is None:
+        if isinstance(settings.mesh.element_def, Q4):
+            # TODO: Allow for custom seeds to be used for Q4 also
+            seed = 1
+            ee, nn = make_grid(seed)
+
+            logger.info("Post processing results from Q4 elements. The seed variable is ignored and the values "
+                        "are extracted at the element centers. Use the upscale value to get interpolated fields.")
+        else:
+            ee, nn = make_grid_Bspline(settings)
+            logger.info("Post processing results from B-spline elements. The upscale variable is ignored. Use "
+                        "the seed varialbe to set the number of gridpoints to be evaluated along each element "
+                        "axis.")
+
+    elif isinstance(seed,int):
+        ee,nn = make_grid(seed)
 
 
-    if isinstance(settings.mesh.element_def, Q4):
-        # TODO: Allow for custom seeds to be used for Q4 also
-        q4 = True
-        seed = 1
-        logger.info("Post processing results from Q4 elements. The seed variable is ignored and the values "
-                    "are extracted at the element centers. Use the upscale value to get interpolated fields.")
-    else:
-        q4 = False
-        logger.info("Post processing results from B-spline elements. The upscale variable is ignored. Use "
-                    "the seed varialbe to set the number of gridpoints to be evaluated along each element "
-                    "axis.")
-
-    ee, nn = make_grid(seed, settings)
-
-    F, coords = defgrad_from_nodal_positions(res.xnodesT, res.ynodesT,
+    F, coords = defgrad_from_nodal_positions(dic_results.xnodesT, dic_results.ynodesT,
                                              settings.mesh,
                                              settings.mesh.element_def, nn,
                                              ee)
@@ -37,89 +96,45 @@ def makeFields(dic_results, seed=21, upscale=1, interpolation_order=1):
     # To make the result formatting consistent across element formulations, we arrange the elements onto a grid
     # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
     # by using 3rd order spline interpolation.
-    n_frames = F.shape[-1]
 
-    # TODO: Refactor into functions and simplify
-    if q4:
-        # Flatten things form multiple elements to a grid of elements
-        grid_shape = (settings.mesh.n_ely, settings.mesh.n_elx)
-        n_frames = F.shape[-1]
-        F2 = np.zeros(
-            (1, 2, 2, settings.mesh.n_elx, settings.mesh.n_ely, F.shape[-1]))
-        for i in range(2):
-            for j in range(2):
-                for t in range(n_frames):
-                    F2[0, i, j, :, :, t] = F[:, i, j, 0, 0, t].reshape(grid_shape).transpose()
+    if isinstance(settings.mesh.element_def, Q4):
+        F,coords  = reshape_elemets_into_mesh(F,coords,settings)
 
-        coords2 = np.zeros(
-            (1, 2, settings.mesh.n_elx, settings.mesh.n_ely, F.shape[-1]))
-        for i in range(2):
-            for t in range(n_frames):
-                coords2[0, i, :, :, t] = coords[:, i, 0, 0, t].reshape(grid_shape).transpose()
+    if upscale != 1:
+        F, coords = upsample_mesh(F,coords,upscale,interpolation_order)
 
-        # Overwrite the old results
-        # TODO: Remove overwriting results as this is a painfully non-functional thing to do...
 
-        coords = coords2
-        F = F2
-
-    if upscale != 1.:
-        elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, coords.shape[-3] - 1, 1. / upscale),
-                                               np.arange(0, coords.shape[-2] - 1, 1. / upscale))
-
-        F3 = np.zeros(
-            (1, 2, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], F.shape[-1]))
-
-        coords3 = np.zeros(
-            (1, 2, elms_x_fine.shape[1], elms_x_fine.shape[0], F.shape[-1]))
-
-        for i in range(2):
-            for t in range(n_frames):
-                coords3[0, i, :, :, t] = map_coordinates(coords[0, i, :, :, t],
-                                                         [elms_y_fine.flatten(),
-                                                          elms_x_fine.flatten()],
-                                                         order=interpolation_order).reshape(
-                    elms_x_fine.shape).transpose()
-
-        for i in range(2):
-            for j in range(2):
-                for t in range(n_frames):
-                    F3[0, i, j, :, :, t] = map_coordinates(F[0, i, j, :, :, t],
-                                                           [elms_y_fine.flatten(),
-                                                            elms_x_fine.flatten()],
-                                                           order=interpolation_order).reshape(
-                        elms_x_fine.shape).transpose()
-
-        coords = coords3
-        F = F3
 
     return Fields(F, coords)
 
 
-def make_grid(seed, settings):
+def make_grid(seed):
     # TODO: Remove hack:
     if seed == 1:
         return np.meshgrid(np.array([0.5]),
                            np.array([0.5]))
-
     else:
+        return np.meshgrid(np.linspace(0., 1., seed),
+                           np.linspace(0., 1., seed))
 
-        if np.ndim(seed) == 1:
-            return np.meshgrid(np.linspace(0., 1., seed[0]),
-                               np.linspace(0., 1., seed[1]))
 
-        else:
 
-            shape = (
-                settings.mesh.element_def.n_nodes_n, settings.mesh.element_def.n_nodes_e)
 
-            ctrl_e = np.linspace(0., 1.0, shape[0])
-            ctrl_n = np.linspace(0., 1.0, shape[1])
+def make_grid_Bspline(settings):
+    # Sample the B-spline element in the center-positions of each sub-element
+    shape = (
+        settings.mesh.element_def.n_nodes_n, settings.mesh.element_def.n_nodes_e)
 
-            mids_e = (ctrl_e[1:] + ctrl_e[:-1]) / 2.
-            mids_n = (ctrl_n[1:] + ctrl_n[:-1]) / 2.
+    print(shape)
 
-            return np.meshgrid(mids_n, mids_e)
+    ctrl_e = np.linspace(0., 1.0, shape[0])
+    ctrl_n = np.linspace(0., 1.0, shape[1])
+
+    mids_e = (ctrl_e[1:] + ctrl_e[:-1]) / 2.
+    mids_n = (ctrl_n[1:] + ctrl_n[:-1]) / 2.
+
+    return np.meshgrid(mids_n, mids_e)
+
 
 
 def defgrad_from_nodal_positions(xnodesT, ynodesT, msh, elm, e, n):
