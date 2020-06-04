@@ -1,6 +1,7 @@
 # This allows for running the example when the repo has been cloned
 import sys
 from os.path import abspath
+
 sys.path.extend([abspath(".")])
 
 import muDIC as dic
@@ -44,7 +45,7 @@ job = dic.DICAnalysis(settings)
 dic_results = job.run()
 
 # Calculate field values
-fields = dic.post.viz.Fields(dic_results,upscale=10)
+fields = dic.post.make_fields(dic_results,sample_location="borders")
 
 # Show a field
 viz = dic.Visualizer(fields,images=images)
