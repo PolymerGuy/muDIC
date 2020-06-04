@@ -8,6 +8,7 @@ from muDIC import Fields
 class TestDIC_Post(TestCase):
     def test__true_strain_(self):
         # Tolerance
+        #TODO: Write set of tests
 
         # Determine absolute error
         self.fail()
@@ -109,6 +110,7 @@ class TestDIC_Post(TestCase):
        true_strain_11 = log(U_11)
        green_strain_11 = 0.5(U_11^2 -1)
        """
+        #TODO: Fix test
         # Tolerance
         toll = 1e-7
         # Generate random numbers in [0.5,1.5]
