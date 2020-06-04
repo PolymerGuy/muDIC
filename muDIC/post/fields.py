@@ -25,7 +25,7 @@ def element_values_to_grid(F, coords, settings):
 
     return F2, coords2
 
-def element_values_to_grid_average_overlaps(F, coords, settings):
+def element_values_to_grid_with_overlaps(F, coords, settings):
     # Flatten things form multiple elements to a grid of elements
 
     F = F.copy()
@@ -49,7 +49,6 @@ def element_values_to_grid_average_overlaps(F, coords, settings):
             for t in range(n_frames):
                 for k in range(mesh_shape[0]):
                     for l in range(mesh_shape[1]):
-                        print("Beep fucking beep!",k,l)
                         F2[0, i, j, k*2:k*2+3, l*2:l*2+3, t] = F[k,l, i, j, :, :, t].transpose()
 
     coords2 = np.zeros(
@@ -123,22 +122,17 @@ def make_fields(dic_results, sample_location="center", upscale=1, upscale_interp
                                              settings.mesh.element_def, nn,
                                              ee)
 
-    print("shape of F is ", F.shape)
 
     # To make the result formatting consistent across element formulations, we arrange the elements onto a grid
-    # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
-    # by using 3rd order spline interpolation.
+    # with the same dimensions as the mesh. Only supported
     if isinstance(settings.mesh.element_def, Q4) and to_grid:
         if sample_location is "borders":
-            F, coords = element_values_to_grid_average_overlaps(F, coords, settings)
+            F, coords = element_values_to_grid_with_overlaps(F, coords, settings)
         else:
             F, coords = element_values_to_grid(F, coords, settings)
 
-
-
-    print("Shape of F after reshaping", F.shape)
-
     if upscale != 1:
+        logger.info("Upscaling is broken at the moment!")
         F, coords = upsample_mesh(F, coords, upscale, upscale_interpolation_order)
 
     return Fields(F, coords)
