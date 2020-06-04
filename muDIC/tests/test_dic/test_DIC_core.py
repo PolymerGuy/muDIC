@@ -73,7 +73,7 @@ class TestFullDICCore(TestCase):
         if n_frames != n_frames_dic:
             return False
 
-        results = muDIC.post.fields.Fields(dic_results, seed=21)
+        results = muDIC.post.make_fields(dic_results)
 
         max_error, mean_error = self.__calculate_DIC_error__(F, results.F())
 

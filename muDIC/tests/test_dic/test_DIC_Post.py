@@ -8,15 +8,7 @@ from muDIC import Fields
 class TestDIC_Post(TestCase):
     def test__true_strain_(self):
         # Tolerance
-        toll = 1e-7
-        rand_nrs = (np.random.random_sample(1000)) + 0.5
 
-        # Format as [nEl,i,j,...]
-        F = np.reshape(rand_nrs, (5, 2, 2, 5, 5, 2))
-        # Calculate true strain
-        U = Fields._polar_decomposition_(F)
-
-        true_strain = Fields._true_strain_(U)
         # Determine absolute error
         self.fail()
 
