@@ -1,2 +1,2 @@
 from .viz import Visualizer
-from .fields import Fields, makeFields
+from .fields import Fields, make_fields
