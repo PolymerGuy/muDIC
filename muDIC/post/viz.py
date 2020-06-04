@@ -92,6 +92,7 @@ class Visualizer(object):
                 n, m = self.images[frame].shape
                 plt.imshow(self.images[frame], cmap=plt.cm.gray, origin="lower", extent=(0, m, 0, n))
 
+
             if quiverdisp:
                 plt.quiver(self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame],
                            self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame], **kwargs)
@@ -103,6 +104,7 @@ class Visualizer(object):
             plt.tricontourf(xs, ys, fvar, **kwargs)
             plt.colorbar()
 
+        plt.title("%s component %i,%i at frame %i" % (keyword,component[0],component[1], frame))
         plt.show()
 
 
