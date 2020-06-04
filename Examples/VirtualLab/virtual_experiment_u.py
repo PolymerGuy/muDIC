@@ -52,7 +52,7 @@ image_stack = dic.ImageStack(image_generator)
 # Now, make a mesh. Make sure to use enough elements
 mesher = dic.Mesher(deg_n=3, deg_e=3,type="spline")
 #mesh = mesher.mesh(image_stack)    # Use this if you want to mesh with a GUI
-mesh = mesher.mesh(image_stack,Xc1=50,Xc2=450,Yc1=50,Yc2=450,n_ely=8,n_elx=8, GUI=False)
+mesh = mesher.mesh(image_stack,Xc1=50,Xc2=450,Yc1=50,Yc2=450,n_ely=12,n_elx=12, GUI=False)
 
 # Prepare the analysis input and initiate the analysis
 input = dic.DICInput(mesh, image_stack)
@@ -62,7 +62,7 @@ dic_job = dic.DICAnalysis(input)
 results = dic_job.run()
 
 # Calculate the fields for later use
-fields = dic.Fields(results, seed=101)
+fields = dic.post.make_fields(results)
 
 # We will now compare the results from the analysis to the displacement which the image was deformed by
 # We do this by evaluating the same function as used to deform the images.
@@ -98,13 +98,13 @@ if show_results:
 
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
-    line1 = ax1.plot(res_field[:, 25], label="correct")
-    line2 = ax1.plot(fields.disp()[0, 0, :, 25, 1], label="DIC")
+    line1 = ax1.plot(res_field[:, 3], label="correct")
+    line2 = ax1.plot(fields.disp()[0, 0, :, 3, 1], label="DIC")
     ax1.set_xlabel("element e-coordinate")
     ax1.set_ylabel("Displacement [pixels]")
 
     ax2 = fig1.add_subplot(111, sharex=ax1, frameon=False)
-    line3 = ax2.plot(res_field[:, 25] - fields.disp()[0, 0, :, 25, 1], "r--", label="difference")
+    line3 = ax2.plot(res_field[:, 3] - fields.disp()[0, 0, :, 3, 1], "r--", label="difference")
     ax2.yaxis.tick_right()
     ax2.yaxis.set_label_position("right")
     ax2.set_ylabel("Deviation [pixels]")
