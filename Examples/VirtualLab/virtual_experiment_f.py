@@ -1,6 +1,7 @@
 # This allows for running the example when the repo has been cloned
 import sys
 from os.path import abspath
+
 sys.path.extend([abspath(".")])
 
 # Example code follows
@@ -35,7 +36,7 @@ speckle_image = vlab.rosta_speckle(super_image_shape, dot_size=4, density=0.5, s
 
 
 # Make an image deformed
-F = np.array([[1.01,0],[0.01,1.0]])
+F = np.array([[1.01,0.01],[0.00,1.0]])
 image_deformer = vlab.imageDeformer_from_defGrad(F)
 
 # Make an image down-sampler including downscaling, fill-factor and sensor grid irregularities
@@ -43,7 +44,7 @@ downsampler = vlab.Downsampler(image_shape=super_image_shape, factor=downsample_
                                pixel_offset_stddev=0.05)
 
 # Make a noise injector producing 2% gaussian additive noise
-noise_injector = vlab.noise_injector("gaussian", sigma=.02)
+noise_injector = vlab.noise_injector("gaussian", sigma=.00)
 
 # Make an synthetic image generation pipeline
 image_generator = vlab.SyntheticImageGenerator(speckle_image=speckle_image, image_deformer=image_deformer,
@@ -52,9 +53,9 @@ image_generator = vlab.SyntheticImageGenerator(speckle_image=speckle_image, imag
 image_stack = dic.ImageStack(image_generator)
 
 # Now, make a mesh. Make sure to use enough elements
-mesher = dic.Mesher(deg_n=3, deg_e=3,type="spline")
+mesher = dic.Mesher(deg_n=3, deg_e=3,type="q4")
 #mesh = mesher.mesh(image_stack) # Use this if you want to use a GUI
-mesh = mesher.mesh(image_stack,Xc1=50,Xc2=450,Yc1=50,Yc2=450,n_ely=8,n_elx=8, GUI=False)
+mesh = mesher.mesh(image_stack,Xc1=50,Xc2=450,Yc1=50,Yc2=450,n_ely=11,n_elx=11, GUI=False)
 
 
 # Prepare the analysis input and initiate the analysis
@@ -66,7 +67,7 @@ dic_job = dic.DICAnalysis(input)
 results = dic_job.run()
 
 # Calculate the fields for later use. Seed is used when spline elements are used and upscale is used for Q4.
-fields = dic.Fields(results, seed=101,upscale=10)
+fields = dic.post.make_fields(results)
 
 # We will now compare the results from the analysis to the deformation gradient which the image was deformed by
 
@@ -80,13 +81,12 @@ if show_results:
 
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
-    #line1 = ax1.plot(res_field[:, 50], label="correct")
-    line2 = ax1.plot(fields.F()[0, 0,0, :, 50, 1], label="DIC")
+    line2 = ax1.plot(fields.F()[0, 0,0, :, 5, 1], label="DIC")
     ax1.set_xlabel("element e-coordinate")
     ax1.set_ylabel("Deformation gradient component 0,0 []")
 
     ax2 = fig1.add_subplot(111, sharex=ax1, frameon=False)
-    line3 = ax2.plot(F[0,0] - fields.F()[0, 0,0, :, 50, 1], "r--", label="difference")
+    line3 = ax2.plot(F[0,0] - fields.F()[0, 0,0, :, 5, 1], "r--", label="difference")
     ax2.yaxis.tick_right()
     ax2.yaxis.set_label_position("right")
     ax2.set_ylabel("Deviation []")
