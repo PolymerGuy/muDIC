@@ -4,7 +4,7 @@ import numpy as np
 from scipy.ndimage import map_coordinates
 
 from muDIC.elements import Q4, BSplineSurface
-
+import matplotlib.pyplot as plt
 
 def element_values_to_grid(F, coords, settings):
     # Flatten things form multiple elements to a grid of elements
@@ -28,23 +28,37 @@ def element_values_to_grid(F, coords, settings):
 def element_values_to_grid_average_overlaps(F, coords, settings):
     # Flatten things form multiple elements to a grid of elements
 
+    F = F.copy()
     # Account for multiple samples per element
     n,m = F.shape[-3:-1]
-    grid_shape = (settings.mesh.n_ely * (n-1)+1, settings.mesh.n_elx * (m-1)+1)
-
     n_frames = F.shape[-1]
+
+    print(F.shape)
+
+    mesh_shape = (settings.mesh.n_ely, settings.mesh.n_elx)
+    F = F.reshape((*mesh_shape,*F.shape[1:]))
+    coords = coords.reshape((*mesh_shape,*coords.shape[1:]))
+
+    plt.plot(coords[:,:, 0, :, :, -1].flatten(), coords[:,:, 1, :, :, -1].flatten(), 'o', alpha=0.1)
+    plt.show(block=True)
+
     F2 = np.zeros(
-        (1, 2, 2, settings.mesh.n_elx * (n-1)+1, settings.mesh.n_ely * (m-1)+1, F.shape[-1]))
+        (1, 2, 2, settings.mesh.n_ely * (n-1)+1, settings.mesh.n_elx * (m-1)+1, F.shape[-1]))
     for i in range(2):
         for j in range(2):
             for t in range(n_frames):
-                F2[0, i, j, :, :, t] = F[:, i, j, 0, 0, t].reshape(grid_shape).transpose()
+                for k in range(mesh_shape[0]):
+                    for l in range(mesh_shape[1]):
+                        print("Beep fucking beep!",k,l)
+                        F2[0, i, j, k*2:k*2+3, l*2:l*2+3, t] = F[k,l, i, j, :, :, t].transpose()
 
     coords2 = np.zeros(
-        (1, 2, settings.mesh.n_elx, settings.mesh.n_ely, F.shape[-1]))
+        (1, 2, settings.mesh.n_ely * (n-1)+1, settings.mesh.n_elx * (m-1)+1, F.shape[-1]))
     for i in range(2):
         for t in range(n_frames):
-            coords2[0, i, :, :, t] = coords[:, i, 0, 0, t].reshape(grid_shape).transpose()
+            for k in range(mesh_shape[0]):
+                for l in range(mesh_shape[1]):
+                    coords2[0, i, k*2:k*2+3, l*2:l*2+3, t] = coords[k,l, i, :, :, t].transpose()
 
     return F2, coords2
 
@@ -115,7 +129,12 @@ def make_fields(dic_results, sample_location="center", upscale=1, upscale_interp
     # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
     # by using 3rd order spline interpolation.
     if isinstance(settings.mesh.element_def, Q4) and to_grid:
-        F, coords = element_values_to_grid(F, coords, settings)
+        if sample_location is "borders":
+            F, coords = element_values_to_grid_average_overlaps(F, coords, settings)
+        else:
+            F, coords = element_values_to_grid(F, coords, settings)
+
+
 
     print("Shape of F after reshaping", F.shape)
 
