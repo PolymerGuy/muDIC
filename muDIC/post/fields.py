@@ -3,11 +3,10 @@ import logging
 import numpy as np
 from scipy.ndimage import map_coordinates
 
-from muDIC.elements import Q4
+from muDIC.elements import Q4, BSplineSurface
 
 
-def reshape_elemets_into_mesh(F, coords, settings):
-    # TODO: Refactor into functions and simplify
+def element_values_to_grid(F, coords, settings):
     # Flatten things form multiple elements to a grid of elements
     grid_shape = (settings.mesh.n_ely, settings.mesh.n_elx)
     n_frames = F.shape[-1]
@@ -24,13 +23,33 @@ def reshape_elemets_into_mesh(F, coords, settings):
         for t in range(n_frames):
             coords2[0, i, :, :, t] = coords[:, i, 0, 0, t].reshape(grid_shape).transpose()
 
-    # Overwrite the old results
-    # TODO: Remove overwriting results as this is a painfully non-functional thing to do...
+    return F2, coords2
+
+def element_values_to_grid_average_overlaps(F, coords, settings):
+    # Flatten things form multiple elements to a grid of elements
+
+    # Account for multiple samples per element
+    n,m = F.shape[-3:-1]
+    grid_shape = (settings.mesh.n_ely * (n-1)+1, settings.mesh.n_elx * (m-1)+1)
+
+    n_frames = F.shape[-1]
+    F2 = np.zeros(
+        (1, 2, 2, settings.mesh.n_elx * (n-1)+1, settings.mesh.n_ely * (m-1)+1, F.shape[-1]))
+    for i in range(2):
+        for j in range(2):
+            for t in range(n_frames):
+                F2[0, i, j, :, :, t] = F[:, i, j, 0, 0, t].reshape(grid_shape).transpose()
+
+    coords2 = np.zeros(
+        (1, 2, settings.mesh.n_elx, settings.mesh.n_ely, F.shape[-1]))
+    for i in range(2):
+        for t in range(n_frames):
+            coords2[0, i, :, :, t] = coords[:, i, 0, 0, t].reshape(grid_shape).transpose()
 
     return F2, coords2
 
 
-def upsample_mesh(F, coords, upscale,interpolation_order):
+def upsample_mesh(F, coords, upscale, interpolation_order):
     # TODO: This is broken as upscale=1 looses one row and column!
     n_frames = F.shape[-1]
     elms_y_fine, elms_x_fine = np.meshgrid(np.arange(0, coords.shape[-3] - 1, 1. / upscale),
@@ -62,54 +81,51 @@ def upsample_mesh(F, coords, upscale,interpolation_order):
     return F3, coords3
 
 
-
-
-def makeFields(dic_results, seed=None, upscale=1, interpolation_order=1):
+def make_fields(dic_results, sample_location="center", upscale=1, upscale_interpolation_order=1, to_grid=True):
     logger = logging.getLogger()
 
-    # The type is implicitly checked by using the interface
     settings = dic_results.settings
 
-    if seed is None:
-        if isinstance(settings.mesh.element_def, Q4):
-            # TODO: Allow for custom seeds to be used for Q4 also
-            seed = 1
+    if isinstance(settings.mesh.element_def, Q4):
+        logger.info("Found Q4 elements")
+
+        if sample_location is "borders":
+            seed = 3
+            logger.info("Sampling values on a %i x %i grid" % (seed, seed))
             ee, nn = make_grid(seed)
 
-            logger.info("Post processing results from Q4 elements. The seed variable is ignored and the values "
-                        "are extracted at the element centers. Use the upscale value to get interpolated fields.")
         else:
-            ee, nn = make_grid_Bspline(settings)
-            logger.info("Post processing results from B-spline elements. The upscale variable is ignored. Use "
-                        "the seed varialbe to set the number of gridpoints to be evaluated along each element "
-                        "axis.")
+            logger.info("Sampling the center of the elements")
+            ee, nn = make_grid(1)
 
-    elif isinstance(seed,int):
-        ee,nn = make_grid(seed)
-
+    elif isinstance(settings.mesh.element_def, BSplineSurface):
+        logger.info("Found Spline elements, sampling the center of the elements")
+        ee, nn = make_grid_Bspline(settings)
+    else:
+        raise IOError("No valid element type found")
 
     F, coords = defgrad_from_nodal_positions(dic_results.xnodesT, dic_results.ynodesT,
                                              settings.mesh,
                                              settings.mesh.element_def, nn,
                                              ee)
 
+    print("shape of F is ", F.shape)
+
     # To make the result formatting consistent across element formulations, we arrange the elements onto a grid
     # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
     # by using 3rd order spline interpolation.
+    if isinstance(settings.mesh.element_def, Q4) and to_grid:
+        F, coords = element_values_to_grid(F, coords, settings)
 
-    if isinstance(settings.mesh.element_def, Q4):
-        F,coords  = reshape_elemets_into_mesh(F,coords,settings)
+    print("Shape of F after reshaping", F.shape)
 
     if upscale != 1:
-        F, coords = upsample_mesh(F,coords,upscale,interpolation_order)
-
-
+        F, coords = upsample_mesh(F, coords, upscale, upscale_interpolation_order)
 
     return Fields(F, coords)
 
 
 def make_grid(seed):
-    # TODO: Remove hack:
     if seed == 1:
         return np.meshgrid(np.array([0.5]),
                            np.array([0.5]))
@@ -118,14 +134,10 @@ def make_grid(seed):
                            np.linspace(0., 1., seed))
 
 
-
-
 def make_grid_Bspline(settings):
     # Sample the B-spline element in the center-positions of each sub-element
     shape = (
         settings.mesh.element_def.n_nodes_n, settings.mesh.element_def.n_nodes_e)
-
-    print(shape)
 
     ctrl_e = np.linspace(0., 1.0, shape[0])
     ctrl_n = np.linspace(0., 1.0, shape[1])
@@ -134,7 +146,6 @@ def make_grid_Bspline(settings):
     mids_n = (ctrl_n[1:] + ctrl_n[:-1]) / 2.
 
     return np.meshgrid(mids_n, mids_e)
-
 
 
 def defgrad_from_nodal_positions(xnodesT, ynodesT, msh, elm, e, n):
@@ -216,7 +227,7 @@ def polar_decomposition(F):
 
 
 class Fields(object):
-    def __init__(self, F,coords):
+    def __init__(self, F, coords):
         """
         Fields calculates field variables from the DIC-results.
         The implementation is lazy, hence getter methods have to be used.
@@ -249,7 +260,6 @@ class Fields(object):
         self.__coords__ = coords
         self.__U__ = polar_decomposition(F)
 
-
     def true_strain(self):
         """
         Calculate true strain tensor teps_ij from engineering strain tensor eps_ij as:
@@ -273,7 +283,8 @@ class Fields(object):
         """
 
         # Calculate green strain tensor as 0.5(F^T * F - I)
-        return 0.5 * (apply_func_in_eigen_space(self.__U__,func=np.square) - np.eye(2)[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])
+        return 0.5 * (apply_func_in_eigen_space(self.__U__, func=np.square) - np.eye(2)[np.newaxis, :, :, np.newaxis,
+                                                                              np.newaxis, np.newaxis])
 
     def coords(self):
         return self.__coords__
