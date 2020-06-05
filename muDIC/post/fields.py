@@ -33,14 +33,9 @@ def element_values_to_grid_with_overlaps(F, coords, settings):
     n,m = F.shape[-3:-1]
     n_frames = F.shape[-1]
 
-    print(F.shape)
-
     mesh_shape = (settings.mesh.n_ely, settings.mesh.n_elx)
     F = F.reshape((*mesh_shape,*F.shape[1:]))
     coords = coords.reshape((*mesh_shape,*coords.shape[1:]))
-
-    plt.plot(coords[:,:, 0, :, :, -1].flatten(), coords[:,:, 1, :, :, -1].flatten(), 'o', alpha=0.1)
-    plt.show(block=True)
 
     F2 = np.zeros(
         (1, 2, 2, settings.mesh.n_ely * (n-1)+1, settings.mesh.n_elx * (m-1)+1, F.shape[-1]))
