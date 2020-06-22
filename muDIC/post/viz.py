@@ -435,9 +435,12 @@ class Visualizer(object):
 
         if save_path is None:
             plt.show()
-        elif not os.path.exists(os.path.dirname(save_path)):
-            os.makedirs(os.path.dirname(save_path))
-            plt.savefig(save_path)
+        else:
+            if not os.path.exists(os.path.dirname(save_path)):
+                os.makedirs(os.path.dirname(save_path))
+                plt.savefig(save_path)
+            else:
+                plt.savefig(save_path)
 
 def ind_closest_below(value, list):
     ind = 0
