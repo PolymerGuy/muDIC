@@ -1,4 +1,4 @@
-import logging
+import logging, os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -362,7 +362,7 @@ class Visualizer(object):
         self.images = images
         self.logger = logging.getLogger()
 
-    def show(self, field="displacement", component=(0, 0), frame=0, quiverdisp=False, **kwargs):
+    def show(self, field="displacement", component=(0, 0), frame=0, quiverdisp=False, save_path=None, **kwargs):
         """
         Show the field variable
 
@@ -381,7 +381,9 @@ class Visualizer(object):
             In the case of vector fields, only the first index is used.
         frame : Integer
             The frame number of the field
-
+        save : string
+            If a path is specified, the plot will be saved to that path, it will not be shown.
+            If None is specified, the plot will be shown only.
         """
 
         keyword = field.replace(" ", "").lower()
@@ -430,8 +432,12 @@ class Visualizer(object):
             else:
                 plt.contourf(xs, ys, fvar, 50, **kwargs)
                 plt.colorbar()
-        plt.show()
 
+        if save_path is None:
+            plt.show()
+        elif not os.path.exists(os.path.dirname(save_path)):
+            os.makedirs(os.path.dirname(save_path))
+            plt.savefig(save_path)
 
 def ind_closest_below(value, list):
     ind = 0
