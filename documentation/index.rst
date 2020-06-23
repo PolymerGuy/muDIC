@@ -1,9 +1,9 @@
 µDIC: A toolkit for digital image correlation
 =======================================
 
-This project aims at providing a "batteries included" toolktit for digital image correlation in Python.
-The functionality you need to perform digital image correaltion on experimental data as 
-well as for doing vitrual experiments are included. 
+This project aims at providing a "batteries included" toolkit for digital image correlation in Python.
+The functionality you need to perform digital image correlation on experimental data as
+well as for doing virtual experiments are included.
 
 .. image:: examples/figures/mesher.png
    :scale: 45 %
@@ -15,7 +15,7 @@ well as for doing vitrual experiments are included.
 
 The main components:
 ------------------------------------
-We have contructed the toolkit as a set of packages where each package provides a isolated set of tools:
+We have constructed the toolkit as a set of packages where each package provides a isolated set of tools:
 
 
 * IO-Tools
@@ -26,6 +26,7 @@ We have contructed the toolkit as a set of packages where each package provides 
     * Image downsampling tools
 * Mesh generation
     * A light weight GUI for structured meshing
+    * Classical Q4 elements
     * B-spline elements
         * Arbitrary polynomial order
         * Knot vectors can be manipulated
@@ -42,9 +43,9 @@ We have contructed the toolkit as a set of packages where each package provides 
 Our motivation
 --------------
 The motivation for this work was the need for a transparent code which could be 
-modified and extended easly, without digging deep into C or C++ source code. 
+modified and extended easily, without digging deep into C or C++ source code.
 The implementation is pure python with the exception of third-party packages such 
-as Scipy, Numy etc.
+as Scipy, Numpy etc.
 
 
 
@@ -56,13 +57,12 @@ ready for a pull request
 
 Authors
 -------
-* **Sindre Olufsen** - *Implementation* - [PolymerGuy](https://github.com/polymerguy)
+* **Sindre Nordmark Olufsen** - *Implementation* - [PolymerGuy](https://github.com/polymerguy)
 * **Marius Endre Andersen** - *Wrote the Matlab code on which this is based*
-
 License
 -------
 
-This project is licensed under the MIT License - see the LICENSE.MD_.
+This project is licensed under the MIT License - see the LICENSE.MD.
 
 .. _LICENSE.MD: https://github.com/PolymerGuy/myDIC/LICENSE.md
 
@@ -71,7 +71,7 @@ Citing this project
 --------------------
 This project is described in the following paper and citation is highly appreciated
 
-[THE AWESOME PAPER TO BE WRITTEN, WHICH WILL PRODUCE MILLIONS OF CITATIONS]
+[µDIC: An open-source toolkit for digital image correlation](https://doi.org/10.1016/j.softx.2019.100391)
 
 
 
