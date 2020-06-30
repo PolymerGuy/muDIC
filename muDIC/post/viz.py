@@ -428,10 +428,23 @@ class Visualizer(object):
                 plt.quiver(self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame],
                            self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame],**kwargs)
             else:
-                plt.contourf(xs, ys, fvar, 50, **kwargs)
-                plt.colorbar()
-        plt.show()
+                #Keep the same scale for each frames
+                plt.contourf(xs, ys, fvar, 50, vmax=0, vmin=-25,cmap=plt.cm.coolwarm)
+                m = plt.cm.ScalarMappable(cmap=plt.cm.coolwarm)
+                m.set_array(fvar)
+                m.set_clim(-25., 0.)
+                plt.colorbar(m, boundaries=np.linspace(-25, 0, 30))
 
+        if save_path is None:
+            plt.show()
+        else:
+            if not os.path.exists(os.path.dirname(save_path)):
+                os.makedirs(os.path.dirname(save_path))
+                plt.savefig(save_path)
+                plt.close()
+            else:
+                plt.savefig(save_path)
+                plt.close()
 
 def ind_closest_below(value, list):
     ind = 0
