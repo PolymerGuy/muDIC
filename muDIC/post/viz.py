@@ -429,11 +429,18 @@ class Visualizer(object):
                            self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame],**kwargs)
             else:
                 #Keep the same scale for each frames
-                plt.contourf(xs, ys, fvar, 50, vmax=0, vmin=-25,cmap=plt.cm.coolwarm)
-                m = plt.cm.ScalarMappable(cmap=plt.cm.coolwarm)
-                m.set_array(fvar)
-                m.set_clim(-25., 0.)
-                plt.colorbar(m, boundaries=np.linspace(-25, 0, 30))
+                if "vmin" in kwargs :
+                    self.vmin = kwargs.get('vmin')
+                    self.vmax = kwargs.get('vmax')
+                    self.cmap = kwargs.get('cmap')
+                    plt.contourf(xs, ys, fvar, 50, **kwargs)
+                    m = plt.cm.ScalarMappable(cmap=self.cmap)
+                    m.set_array(fvar)
+                    m.set_clim(float(self.vmin), float(self.vmax))
+                    plt.colorbar(m, boundaries=np.linspace(self.vmin, self.vmax, 30))
+                else :
+                    plt.contourf(xs, ys, fvar, 50, **kwargs)
+                    plt.colorbar()
 
         if save_path is None:
             plt.show()
