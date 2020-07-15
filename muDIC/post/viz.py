@@ -428,20 +428,40 @@ class Visualizer(object):
                 plt.quiver(self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame],
                            self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame],**kwargs)
             else:
-                #Keep the same scale for each frames
-                if "vmin" in kwargs :
-                    self.vmin = kwargs.get('vmin')
-                    self.vmax = kwargs.get('vmax')
-                    self.cmap = kwargs.get('cmap')
-                    plt.contourf(xs, ys, fvar, 50, **kwargs)
-                    m = plt.cm.ScalarMappable(cmap=self.cmap)
-                    m.set_array(fvar)
-                    m.set_clim(float(self.vmin), float(self.vmax))
-                    plt.colorbar(m, boundaries=np.linspace(self.vmin, self.vmax, 30))
+                if "vmax" in kwargs :
+                    if "vmin" in kwargs :
+                        self.vmin = kwargs.get('vmin')
+                        self.vmax = kwargs.get('vmax')
+                        self.cmap = kwargs.get('cmap')
+                        plt.contourf(xs, ys, fvar, 50, **kwargs)
+                        m = plt.cm.ScalarMappable(cmap=self.cmap)
+                        m.set_array(fvar)
+                        m.set_clim(float(self.vmin), float(self.vmax))
+                        cbar = plt.colorbar(m, boundaries=np.linspace(self.vmin, self.vmax, 30))
+                        cbar.set_label('Number of pixels', rotation=270)
+                    else :
+                        self.vmax = kwargs.get('vmax')
+                        self.cmap = kwargs.get("cmap")
+                        plt.contourf(xs, ys, fvar, 50, **kwargs)
+                        m = plt.cm.ScalarMappable(cmap=self.cmap)
+                        m.set_array(fvar)
+                        m.set_clim(float(fvar.max()), float(self.vmax))
+                        cbar = plt.colorbar(m, boundaries=np.linspace(fvar.min(), self.vmax, 30))
+                        cbar.set_label('Number of pixels', rotation=270)
                 else :
-                    plt.contourf(xs, ys, fvar, 50, **kwargs)
-                    plt.colorbar()
-
+                    if "vmin" in kwargs :
+                        self.vmin = kwargs.get('vmin')
+                        self.cmap = kwargs.get("cmap")
+                        plt.contourf(xs, ys, fvar, 50, **kwargs)
+                        m = plt.cm.ScalarMappable(cmap=self.cmap)
+                        m.set_array(fvar)
+                        m.set_clim(float(self.vmin), float(fvar.max()))
+                        cbar = plt.colorbar(m, boundaries=np.linspace(self.vmin, fvar.max(), 30))
+                        cbar.set_label('Number of pixels', rotation=270)
+                    else :
+                        plt.contourf(xs, ys, fvar, 50, **kwargs)
+                        plt.colorbar()
+                        
         if save_path is None:
             plt.show()
         else:
@@ -452,6 +472,7 @@ class Visualizer(object):
             else:
                 plt.savefig(save_path)
                 plt.close()
+
 
 def ind_closest_below(value, list):
     ind = 0
