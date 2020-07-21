@@ -362,7 +362,7 @@ class Visualizer(object):
         self.images = images
         self.logger = logging.getLogger()
 
-    def show(self, field="displacement", component=(0, 0), frame=0, quiverdisp=False, **kwargs):
+    def show(self, field="displacement", component=(0, 0), frame=0, title=None, quiverdisp=False, **kwargs):
         """
         Show the field variable
 
@@ -428,9 +428,36 @@ class Visualizer(object):
                 plt.quiver(self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame],
                            self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame],**kwargs)
             else:
-                plt.contourf(xs, ys, fvar, 50, **kwargs)
-                plt.colorbar()
-        plt.show()
+                temp_min = 0
+                temp_max = 0
+                for i in range (len(self.image)):
+                    fvar_temp = self.fields.disp()[0, component[0], :, :, i]  
+                    if fvar_temp.max()>temp_max :
+                        temp_max = fvar_temp.max() 
+                    if fvar_temp.min()<temp_min :
+                        temp_min = fvar_temp.min()
+                    else : 
+                        i+=1
+
+                self.cmap = kwargs.get('cmap')
+                plt.contourf(xs, ys, fvar, 50, vmin=temp_min, vmax=temp_max, **kwargs)
+                m = plt.cm.ScalarMappable(cmap=self.cmap)
+                m.set_array(fvar)
+                m.set_clim(float(temp_min), float(temp_max))
+                cbar = plt.colorbar(m, boundaries=np.linspace(temp_min, temp_max, 30))
+                cbar.set_label('Number of pixels', rotation=270)
+
+        plt.title(title,loc='center')
+        if save_path is None:
+            plt.show()
+        else:
+            if not os.path.exists(os.path.dirname(save_path)):
+                os.makedirs(os.path.dirname(save_path))
+                plt.savefig(save_path)
+                plt.close()
+            else:
+                plt.savefig(save_path)
+                plt.close()
 
 
 def ind_closest_below(value, list):
