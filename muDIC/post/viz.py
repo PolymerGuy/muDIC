@@ -428,24 +428,11 @@ class Visualizer(object):
                 plt.quiver(self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame],
                            self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame],**kwargs)
             else:
-                temp_min = 0
-                temp_max = 0
-                for i in range (len(self.image)):
-                    fvar_temp = self.fields.disp()[0, component[0], :, :, i]  
-                    if fvar_temp.max()>temp_max :
-                        temp_max = fvar_temp.max() 
-                    if fvar_temp.min()<temp_min :
-                        temp_min = fvar_temp.min()
-                    else : 
-                        i+=1
-
-                self.cmap = kwargs.get('cmap')
-                plt.contourf(xs, ys, fvar, 50, vmin=temp_min, vmax=temp_max, **kwargs)
-                m = plt.cm.ScalarMappable(cmap=self.cmap)
+                im = plt.contourf(xs, ys, fvar, **kwargs)
+                m = plt.cm.ScalarMappable(cmap=im.get_cmap())
                 m.set_array(fvar)
-                m.set_clim(float(temp_min), float(temp_max))
-                cbar = plt.colorbar(m, boundaries=np.linspace(temp_min, temp_max, 30))
-                cbar.set_label('Number of pixels', rotation=270)
+                m.set_clim(*im.get_clim())
+                cbar = plt.colorbar(m)
 
         plt.title(title,loc='center')
         if save_path is None:
