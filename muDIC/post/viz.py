@@ -433,6 +433,10 @@ class Visualizer(object):
                 m.set_array(fvar)
                 m.set_clim(*im.get_clim())
                 cbar = plt.colorbar(m)
+        if 'vmax' in kwargs or 'vmin' in kwargs :
+           print("The colorbar has been cropped")
+        else :
+            print("The colorbar has been established automatically")
 
         plt.title(title,loc='center')
         if save_path is None:
