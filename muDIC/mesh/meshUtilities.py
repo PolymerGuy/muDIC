@@ -13,6 +13,7 @@ from ..elements.q4 import Q4
 def scale_to_unit(array):
     return (array - array.min()) / (array.max() - array.min())
 
+
 # Abaqus reader prototype
 def mesh_from_abaqus(inpfile_name, unit_dim=False):
     """Generate mesh from Abaqus inpt file
@@ -86,13 +87,11 @@ def mesh_from_abaqus(inpfile_name, unit_dim=False):
     ynodes = nodes[:, 1]
     con_mat = con_mat.transpose()
 
-
     if unit_dim:
         xnodes = scale_to_unit(xnodes)
         ynodes = scale_to_unit(ynodes)
 
-
-    return Mesh(Q4(),xnodes,ynodes,con_mat)
+    return Mesh(Q4(), xnodes, ynodes, con_mat)
 
 
 def make_grid_Q4(c1x, c1y, c2x, c2y, nx, ny, elm):
@@ -123,8 +122,10 @@ def make_grid_Q4(c1x, c1y, c2x, c2y, nx, ny, elm):
 
     for i in range(ny):
         for j in range(nx):
-            elements.append(zip(np.around(ynodes[:] + elmheigt * i,n_decimals), np.around(xnodes[:] + elmwidth * j,n_decimals)))
-            nodes.update(zip(np.around(ynodes[:] + elmheigt * i,n_decimals), np.around(xnodes[:] + elmwidth * j,n_decimals)))
+            elements.append(
+                zip(np.around(ynodes[:] + elmheigt * i, n_decimals), np.around(xnodes[:] + elmwidth * j, n_decimals)))
+            nodes.update(
+                zip(np.around(ynodes[:] + elmheigt * i, n_decimals), np.around(xnodes[:] + elmwidth * j, n_decimals)))
 
     nodes = sorted(list(nodes))
 
@@ -189,8 +190,8 @@ def make_grid(c1x, c1y, c2x, c2y, ny, nx, elm):
     node_x = np.array(xnod) + c1x
     node_y = np.array(ynod) + c1y
 
-    con_matrix = np.zeros((nx * ny,1),dtype=np.int)
-    con_matrix[:,0] = np.arange(nx*ny,dtype=np.int)
+    con_matrix = np.zeros((nx * ny, 1), dtype=np.int)
+    con_matrix[:, 0] = np.arange(nx * ny, dtype=np.int)
 
     return con_matrix, node_x, node_y
 
@@ -356,7 +357,7 @@ class Mesher(object):
 
 
 class Mesh(object):
-    def __init__(self,element,xnodes,ynodes,con_mat):
+    def __init__(self, element, xnodes, ynodes, con_mat):
         self.element_def = element
 
         self.xnodes = xnodes
@@ -365,8 +366,6 @@ class Mesh(object):
 
         self.n_nodes = len(xnodes)
         self.n_elms = np.shape(con_mat)[1]
-
-
 
     def scale_mesh_y(self, factor):
         """
@@ -380,8 +379,7 @@ class Mesh(object):
 
          """
         center = (np.max(self.ynodes) + np.min(self.ynodes)) / 2.
-        self.ynodes = factor * (self.ynodes-center) + center
-
+        self.ynodes = factor * (self.ynodes - center) + center
 
     def scale_mesh_x(self, factor):
         """
@@ -395,7 +393,7 @@ class Mesh(object):
 
          """
         center = (np.max(self.xnodes) + np.min(self.xnodes)) / 2.
-        self.xnodes = factor * (self.xnodes-center) + center
+        self.xnodes = factor * (self.xnodes - center) + center
 
     def center_mesh_at(self, center_point_x, center_point_y):
         """
@@ -412,12 +410,11 @@ class Mesh(object):
         center_x = (np.max(self.xnodes) + np.min(self.xnodes)) / 2.
         center_y = (np.max(self.ynodes) + np.min(self.ynodes)) / 2.
 
-        shift_x = center_x-center_point_x
-        shift_y = center_y-center_point_y
+        shift_x = center_x - center_point_x
+        shift_y = center_y - center_point_y
 
         self.xnodes = self.xnodes - shift_x
         self.ynodes = self.ynodes - shift_y
-
 
 
 class MeshStructured(object):
