@@ -87,8 +87,9 @@ def correlate_frames(node_pos, mesh, img, ref, settings):
         # Find nodal positions within ROI
         np.dot(node_pos, ref.Nref_stack, out=pixel_pos)
 
-        # Find pixel values for current coordinates
-        Ic = nd.map_coordinates(image_filtered, pixel_pos, order=settings.interpolation_order, prefilter=False)
+        # Find pixel values for current coordinates. Use edge values if out of bounds.
+        Ic = nd.map_coordinates(image_filtered, pixel_pos, order=settings.interpolation_order, prefilter=False,
+                                mode="nearest")
 
         # Calculate position increment as (B^T B)^-1 * (B^T*dIk) "Least squares solution"
         dnod = np.dot(ref.K, ref.I0_stack - Ic)
@@ -189,6 +190,12 @@ def correlate(inputs, correlator, reference_gen):
         for image_id in range(1, settings.max_nr_im):
             logger.info('Processing frame nr: %i', image_id)
 
+            # Check that the elements are all within the image
+
+            if elements_outside_image(node_coords, images[image_id].shape, settings):
+                raise ValueError("The elements cover pixels outside the image. Reduce the mesh size or reduce the "
+                                 "padding")
+
             if settings.node_hist:
                 if len(settings.node_hist) >= image_id:
                     logger.info("Using initial conditions")
@@ -230,8 +237,32 @@ def correlate(inputs, correlator, reference_gen):
 
             node_position_t.append(node_coords)
 
+    except Exception as e:
+        logger.exception(e)
+        pass
+
     finally:
         return np.array(node_position_t), reference_stack, Ic_stacks
+
+
+def elements_outside_image(node_coords, img_shape, settings):
+    """
+    This function checks that the borders including padding are within the image
+    :param borders: List of element borders
+    :param img_shape: Shape of image
+    :param pad: Width of the padding
+    :return: Bool
+    """
+
+    borders = find_elm_borders_mesh(node_coords, settings.mesh, settings.mesh.n_elms)
+
+    n_frames = np.shape(borders)[1]
+    h, w = img_shape
+    for i in range(n_frames):
+        if (borders[2, i].astype(int) - settings.pad) < 0 or (borders[3, i].astype(int) + settings.pad) >= h or (
+                borders[0, i].astype(int) - settings.pad) < 0 or (borders[1, i].astype(int) + settings.pad) >= w:
+            return True
+    return False
 
 
 def correlate_img_to_ref_q4(node_coordss, img, ref, settings):
@@ -279,7 +310,7 @@ def correlate_img_to_ref_q4(node_coordss, img, ref, settings):
             # Determine greyscale value at XYc
             nd.map_coordinates(img_frames[el],
                                pix_cord_local[el], order=settings.interpolation_order, prefilter=False,
-                               output=Ic)
+                               output=Ic, mode="nearest")
 
             # Calculate B^T * dIK
             np.dot(ref.B_stack[el], (ref.I0_stack[el] - Ic), out=di)
