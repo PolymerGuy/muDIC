@@ -10,6 +10,91 @@ from ..elements.b_splines import BSplineSurface
 from ..elements.q4 import Q4
 
 
+def scale_to_unit(array):
+    return (array - array.min()) / (array.max() - array.min())
+
+# Abaqus reader prototype
+def mesh_from_abaqus(inpfile_name, unit_dim=False):
+    """Generate mesh from Abaqus inpt file
+
+     The nodal positions and nodal connectivities are extracted from the input file.
+
+     The supported Abaqus mesh types are:
+         * 4-Noded planar
+
+     Example
+     -------
+     Let's import the mesh provided in examples and plot the nodal positions
+
+     >>> from muDIC import mesh_from_abaqus
+     >>> import matplotlib.pyplot as plt
+     >>> nodes_x,nodes_y,con_mat = mesh_from_abaqus('./abaqusMeshes/ring.inp')
+     >>> plt.plot(nodes_x,nodes_y)
+     >>> plt.show()
+
+
+     Note
+     ----
+     More noise models should be added later
+
+     Parameters
+     ----------
+     noise_model : string
+         The noise model to be used. Eg. "gaussian"
+     sigma : float
+         The standard deviation of the noise distribution
+     """
+
+    with open(inpfile_name, 'r') as f:
+        nodal = []
+        connectivity = []
+
+        read_nodes = False
+        read_elm = False
+        last_ln = ''
+        for line in f:
+            ln = line.strip()
+
+            if ln == '*Node' and '*Part' in last_ln:
+                read_nodes = True
+            elif '*Element' in ln:
+                read_nodes = False
+                read_elm = True
+
+            if '*End' in ln:
+                read_elm = False
+
+            if read_nodes:
+                nodal.append(ln)
+            if read_elm:
+                connectivity.append(ln)
+
+            last_ln = ln
+
+    # Convert the strings to numerical data
+    nodes = np.array([ind.split(',') for ind in nodal[1:]], dtype=np.float)
+
+    # Remove the node labels
+    nodes = nodes[:, 1:]
+
+    con_mat = np.array([elm.split(',') for elm in connectivity[1:]], dtype=np.int)
+
+    # The node indices are to be zero indexed, remove labels
+    con_mat = con_mat[:, 1:] - 1
+
+    xnodes = nodes[:, 0]
+    ynodes = nodes[:, 1]
+    con_mat = con_mat.transpose()
+
+
+    if unit_dim:
+        xnodes = scale_to_unit(xnodes)
+        ynodes = scale_to_unit(ynodes)
+
+
+    return Mesh(Q4(),xnodes,ynodes,con_mat)
+
+
 def make_grid_Q4(c1x, c1y, c2x, c2y, nx, ny, elm):
     # type: (float, float, float, float, int, int, instance) -> object
     """
@@ -262,7 +347,7 @@ class Mesher(object):
         else:
             element = Q4()
 
-        self._mesh_ = Mesh(element, Xc1, Xc2, Yc1, Yc2, n_elx, n_ely)
+        self._mesh_ = MeshStructured(element, Xc1, Xc2, Yc1, Yc2, n_elx, n_ely)
 
         if GUI:
             self.__gui__()
@@ -271,6 +356,71 @@ class Mesher(object):
 
 
 class Mesh(object):
+    def __init__(self,element,xnodes,ynodes,con_mat):
+        self.element_def = element
+
+        self.xnodes = xnodes
+        self.ynodes = ynodes
+        self.ele = con_mat
+
+        self.n_nodes = len(xnodes)
+        self.n_elms = np.shape(con_mat)[1]
+
+
+
+    def scale_mesh_y(self, factor):
+        """
+        Scale mesh in the y direction by a factor
+
+
+         Parameters
+         ----------
+        factor : float
+            The factor which the mesh is scaled by in the y direction
+
+         """
+        center = (np.max(self.ynodes) + np.min(self.ynodes)) / 2.
+        self.ynodes = factor * (self.ynodes-center) + center
+
+
+    def scale_mesh_x(self, factor):
+        """
+        Scale mesh in the x direction by a factor
+
+
+         Parameters
+         ----------
+        factor : float
+            The factor which the mesh is scaled by in the x direction
+
+         """
+        center = (np.max(self.xnodes) + np.min(self.xnodes)) / 2.
+        self.xnodes = factor * (self.xnodes-center) + center
+
+    def center_mesh_at(self, center_point_x, center_point_y):
+        """
+        Center the mesh at coordinates
+
+
+         Parameters
+         ----------
+        center_pointx : float
+            The center point of the mesh in the x-direction
+        center_pointy : float
+            The center point of the mesh in the y-direction
+         """
+        center_x = (np.max(self.xnodes) + np.min(self.xnodes)) / 2.
+        center_y = (np.max(self.ynodes) + np.min(self.ynodes)) / 2.
+
+        shift_x = center_x-center_point_x
+        shift_y = center_y-center_point_y
+
+        self.xnodes = self.xnodes - shift_x
+        self.ynodes = self.ynodes - shift_y
+
+
+
+class MeshStructured(object):
     def __init__(self, element, corner1_x, corner2_x, corner1_y, corner2_y, n_elx, n_ely):
         """
         Mesh class
