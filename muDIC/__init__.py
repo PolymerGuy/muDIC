@@ -11,7 +11,7 @@ from . import post
 from . import vlab
 from . import utils
 from .IO import image_stack_from_list, image_stack_from_folder, ImageStack
-from .mesh import Mesher
+from .mesh import Mesher, mesh_from_abaqus
 from .solver import *
 
 
