@@ -87,7 +87,7 @@ def mesh_from_abaqus(inpfile_name, unit_dim=False):
     ynodes = nodes[:, 1]
     con_mat = con_mat.transpose()
 
-    if len(xnodes) != len(ynodes) or con_mat.shape[0]!=4:
+    if len(xnodes) != len(ynodes) or con_mat.shape[0] != 4:
         raise IOError("Invalid Abaqus input file")
 
     if unit_dim:
@@ -359,6 +359,7 @@ class Mesher(object):
         return copy(self._mesh_)
 
 
+# TODO: Refactor this into an immutable object
 class Mesh(object):
     def __init__(self, element, xnodes, ynodes, con_mat):
         self.element_def = element
@@ -418,6 +419,19 @@ class Mesh(object):
 
         self.xnodes = self.xnodes - shift_x
         self.ynodes = self.ynodes - shift_y
+
+    def fit_to_box(self, corner1_x, corner2_x, corner1_y, corner2_y):
+        taget_span_x = np.abs(corner2_x - corner1_x)
+        taget_span_y = np.abs(corner2_y - corner1_y)
+        center_x = (corner2_x + corner1_x) / 2.
+        center_y = (corner2_y + corner1_y) / 2.
+
+        scale_x = taget_span_x / (self.xnodes.max() - self.xnodes.min())
+        scale_y = taget_span_y / (self.ynodes.max() - self.ynodes.min())
+
+        self.center_mesh_at(center_x, center_y)
+        self.scale_mesh_x(scale_x)
+        self.scale_mesh_y(scale_y)
 
 
 class MeshStructured(object):

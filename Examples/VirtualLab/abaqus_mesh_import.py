@@ -18,9 +18,13 @@ are plotted using a rudimentary visualization tool.
 """
 
 mesh = dic.mesh_from_abaqus('./abaqusMeshes/ring.inp', unit_dim=True)
+
+# You can move the mesh to the desired position like this
 mesh.center_mesh_at(1000, 1000)
 mesh.scale_mesh_x(1800)
 mesh.scale_mesh_y(1800)
+# or like this
+mesh.fit_to_box(200,1800,200,1800)
 
 # Set the amount of info printed to terminal during analysis
 logging.basicConfig(format='%(name)s:%(levelname)s:%(message)s', level=logging.INFO)
