@@ -359,9 +359,29 @@ class Mesher(object):
         return copy(self._mesh_)
 
 
-# TODO: Refactor this into an immutable object
 class Mesh(object):
     def __init__(self, element, xnodes, ynodes, con_mat):
+        """
+         Mesh class
+
+         Contains a finite element mesh, defined by the finite element,
+         the nodal coordinates and the connectivity matrix.
+
+          Parameters
+          ----------
+         element : object
+             Instance of FiniteElement containing element definitions
+         xnodes : array
+             The X-coordinate of the nodes
+         ynodes : array
+             The Y-coordinate of the nodes
+         con_mat : array
+             The connectivity matrix, having the dimensions 4 x n_elements
+
+        NOTES
+        -----
+        The object is intended to be immutable and all methods returns a new Mesh instance.
+        """
         self.element_def = element
 
         self.xnodes = xnodes
@@ -381,9 +401,15 @@ class Mesh(object):
         factor : float
             The factor which the mesh is scaled by in the y direction
 
+        Returns
+        -------
+        mesh: Mesh instance
+            A scaled mesh
          """
         center = (np.max(self.ynodes) + np.min(self.ynodes)) / 2.
-        self.ynodes = factor * (self.ynodes - center) + center
+        ynodes = factor * (self.ynodes - center) + center
+
+        return Mesh(self.element_def, self.xnodes, ynodes, self.ele)
 
     def scale_mesh_x(self, factor):
         """
@@ -395,9 +421,15 @@ class Mesh(object):
         factor : float
             The factor which the mesh is scaled by in the x direction
 
+        Returns
+        -------
+        mesh: Mesh instance
+            A scaled mesh
+
          """
         center = (np.max(self.xnodes) + np.min(self.xnodes)) / 2.
-        self.xnodes = factor * (self.xnodes - center) + center
+        xnodes = factor * (self.xnodes - center) + center
+        return Mesh(self.element_def, xnodes, self.ynodes, self.ele)
 
     def center_mesh_at(self, center_point_x, center_point_y):
         """
@@ -410,6 +442,11 @@ class Mesh(object):
             The center point of the mesh in the x-direction
         center_pointy : float
             The center point of the mesh in the y-direction
+
+        Returns
+        -------
+        mesh: Mesh instance
+            A centered mesh
          """
         center_x = (np.max(self.xnodes) + np.min(self.xnodes)) / 2.
         center_y = (np.max(self.ynodes) + np.min(self.ynodes)) / 2.
@@ -417,21 +454,39 @@ class Mesh(object):
         shift_x = center_x - center_point_x
         shift_y = center_y - center_point_y
 
-        self.xnodes = self.xnodes - shift_x
-        self.ynodes = self.ynodes - shift_y
+        xnodes = self.xnodes - shift_x
+        ynodes = self.ynodes - shift_y
+
+        return Mesh(self.element_def, xnodes, ynodes, self.ele)
 
     def fit_to_box(self, corner1_x, corner2_x, corner1_y, corner2_y):
-        taget_span_x = np.abs(corner2_x - corner1_x)
-        taget_span_y = np.abs(corner2_y - corner1_y)
+        """
+        Center the mesh at coordinates
+
+
+         Parameters
+         ----------
+        corner1_x : float
+            X-coordinate of upper left corner
+        corner2_x : float
+            X-coordinate of lower right corner
+        corner1_y : float
+            Y-coordinate of upper left corner
+        corner2_y : float
+            Y-coordinate of lower right corner
+
+        Returns
+        -------
+        mesh: Mesh instance
+            A mesh fitting within the bounding box
+         """
         center_x = (corner2_x + corner1_x) / 2.
         center_y = (corner2_y + corner1_y) / 2.
 
-        scale_x = taget_span_x / (self.xnodes.max() - self.xnodes.min())
-        scale_y = taget_span_y / (self.ynodes.max() - self.ynodes.min())
+        scale_x = np.abs(corner2_x - corner1_x) / (self.xnodes.max() - self.xnodes.min())
+        scale_y = np.abs(corner2_y - corner1_y) / (self.ynodes.max() - self.ynodes.min())
 
-        self.center_mesh_at(center_x, center_y)
-        self.scale_mesh_x(scale_x)
-        self.scale_mesh_y(scale_y)
+        return self.center_mesh_at(center_x, center_y).scale_mesh_x(scale_x).scale_mesh_y(scale_y)
 
 
 class MeshStructured(object):
