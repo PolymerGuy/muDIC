@@ -20,8 +20,6 @@ def mesh_from_abaqus(inpfile_name, unit_dim=False):
 
      The nodal positions and nodal connectivities are extracted from the input file.
 
-     The supported Abaqus mesh types are:
-         * 4-Noded planar
 
      Example
      -------
@@ -36,14 +34,16 @@ def mesh_from_abaqus(inpfile_name, unit_dim=False):
 
      Note
      ----
-     More noise models should be added later
+     The supported Abaqus mesh types are:
+         * 4-Noded planar
+
 
      Parameters
      ----------
-     noise_model : string
-         The noise model to be used. Eg. "gaussian"
-     sigma : float
-         The standard deviation of the noise distribution
+     inpfile_name : string
+         Name of Abaqus input file containing the mesh
+     unit_dim : bool
+         Scale the mesh such that it spans form zero to one in both directions
      """
 
     with open(inpfile_name, 'r') as f:
@@ -86,6 +86,9 @@ def mesh_from_abaqus(inpfile_name, unit_dim=False):
     xnodes = nodes[:, 0]
     ynodes = nodes[:, 1]
     con_mat = con_mat.transpose()
+
+    if len(xnodes) != len(ynodes) or con_mat.shape[0]!=4:
+        raise IOError("Invalid Abaqus input file")
 
     if unit_dim:
         xnodes = scale_to_unit(xnodes)
