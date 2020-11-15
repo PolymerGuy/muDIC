@@ -175,7 +175,7 @@ def correlate(inputs, correlator, reference_gen):
     else:
         gen_ref = reference_gen
 
-    if settings.node_hist:
+    if settings.node_hist is not None:
         node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, 0]
     else:
         node_coords = np.array((mesh.xnodes, mesh.ynodes), dtype=settings.precision)
@@ -196,7 +196,7 @@ def correlate(inputs, correlator, reference_gen):
                 raise ValueError("The elements cover pixels outside the image. Reduce the mesh size or reduce the "
                                  "padding")
 
-            if settings.node_hist:
+            if settings.node_hist is not None:
                 if len(settings.node_hist) >= image_id:
                     logger.info("Using initial conditions")
                     node_coords = np.array(settings.node_hist, dtype=settings.precision)[:, :, image_id]
