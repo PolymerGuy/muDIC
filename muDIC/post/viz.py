@@ -380,6 +380,41 @@ class Visualizer(object):
         self.images = images
         self.logger = logging.getLogger()
 
+    def __field_vals__(self, field, component, frame):
+        keyword = field.replace(" ", "").lower()
+
+        if keyword == "truestrain":
+            fvar = self.fields.true_strain()[:, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+
+        elif keyword in ("F", "degrad", "deformationgradient"):
+            fvar = self.fields.F()[:, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+
+        elif keyword == "engstrain":
+            fvar = self.fields.eng_strain()[:, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+
+        elif keyword in ("displacement", "disp", "u"):
+            fvar = self.fields.disp()[:, component[0], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+
+        elif keyword in ("coordinates", "coords", "coord"):
+            fvar = self.fields.coords()[:, component[0], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+
+        elif keyword == "greenstrain":
+            fvar = self.fields.green_strain()[:, component[0], component[1], :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
+
+        elif keyword == "residual":
+            fvar = self.fields.residual(frame)
+            xs, ys = self.fields.elm_coords(frame)
+
+        else:
+            raise ValueError("No valid field name was specified")
+        return xs, ys, fvar
+
     def show(self, field="displacement", component=(0, 0), frame=0, quiverdisp=False, save_path=None, **kwargs):
         """
         Show the field variable
@@ -404,56 +439,27 @@ class Visualizer(object):
             If None is specified, the plot will be shown only.
         """
 
-        keyword = field.replace(" ", "").lower()
-
-        if keyword == "truestrain":
-            fvar = self.fields.true_strain()[:, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
-
-        elif keyword in ("F", "degrad", "deformationgradient"):
-            fvar = self.fields.F()[:, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
-
-        elif keyword == "engstrain":
-            fvar = self.fields.eng_strain()[:, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
-
-        elif keyword in ("displacement", "disp", "u"):
-            fvar = self.fields.disp()[:, component[0], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
-
-        elif keyword in ("coordinates", "coords", "coord"):
-            fvar = self.fields.coords()[:, component[0], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
-
-
-        elif keyword == "greenstrain":
-            fvar = self.fields.green_strain()[:, component[0], component[1], :, :, frame]
-            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
-
-        elif keyword == "residual":
-            fvar = self.fields.residual(frame)
-            xs, ys = self.fields.elm_coords(frame)
-
-        else:
-            self.logger.info("No valid field name was specified")
-            return
+        xs, ys, fvar = self.__field_vals__(field, component, frame)
 
         if self.images:
             n, m = self.images[frame].shape
             plt.imshow(self.images[frame], cmap=plt.cm.gray, origin="lower", extent=(0, m, 0, n))
 
+        if quiverdisp:
+            self.logger.info("Showing quiver plot of displacements")
+            plt.quiver(self.fields.coords()[:, 0, :, :, frame].flatten(),
+                       self.fields.coords()[:, 1, :, :, frame].flatten(),
+                       self.fields.disp()[:, 0, :, :, frame].flatten(), self.fields.disp()[:, 1, :, :, frame].flatten(),
+                       **kwargs)
+
         if isinstance(self.fields.__settings__.mesh, StructuredMesh):
-            if quiverdisp:
-                plt.quiver(self.fields.coords()[0, 0, :, :, frame], self.fields.coords()[0, 1, :, :, frame],
-                           self.fields.disp()[0, 0, :, :, frame], self.fields.disp()[0, 1, :, :, frame],**kwargs)
-
-
-            else:
-                plt.contourf(xs[0,:], ys[0,:], fvar[0,:], 50, **kwargs)
-                plt.colorbar()
+            self.logger.info("Showing results from structured mesh")
+            plt.contourf(xs[0, :], ys[0, :], fvar[0, :], 50, **kwargs)
+            plt.colorbar()
         else:
-            plt_unstructured_results(self.fields.__res__.xnodesT[:,frame],self.fields.__res__.ynodesT[:,frame],self.fields.__settings__.mesh.ele.transpose(),fvar[:,0,0].flatten())
+            self.logger.info("Showing results from irregular mesh")
+            plt_unstructured_results(self.fields.__res__.xnodesT[:, frame], self.fields.__res__.ynodesT[:, frame],
+                                     self.fields.__settings__.mesh.ele.transpose(), fvar[:, 0, 0].flatten())
 
         if save_path is None:
             plt.show()
@@ -463,6 +469,7 @@ class Visualizer(object):
                 plt.savefig(save_path)
             else:
                 plt.savefig(save_path)
+
 
 def ind_closest_below(value, list):
     ind = 0
