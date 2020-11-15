@@ -37,7 +37,7 @@ class Fields(object):
         A Fields object
         """
 
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger(__name__)
 
         # The type is implicitly checked by using the interface
         self.__res__ = dic_results
@@ -378,7 +378,7 @@ class Visualizer(object):
             raise ValueError("Only instances of Fields are accepted")
 
         self.images = images
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger(__name__)
 
     def __field_vals__(self, field, component, frame):
         keyword = field.replace(" ", "").lower()
@@ -451,19 +451,20 @@ class Visualizer(object):
                        self.fields.coords()[:, 1, :, :, frame].flatten(),
                        self.fields.disp()[:, 0, :, :, frame].flatten(), self.fields.disp()[:, 1, :, :, frame].flatten(),
                        **kwargs)
-
-        if isinstance(self.fields.__settings__.mesh, StructuredMesh):
-            self.logger.info("Showing results from structured mesh")
-            plt.contourf(xs[0, :], ys[0, :], fvar[0, :], 50, **kwargs)
-            plt.colorbar()
         else:
-            self.logger.info("Showing element by element results on irregular grid")
-            plt_unstructured_results(self.fields.__res__.xnodesT[:, frame], self.fields.__res__.ynodesT[:, frame],
-                                     self.fields.__settings__.mesh.ele, fvar[:, 0, 0].flatten())
+            if isinstance(self.fields.__settings__.mesh, StructuredMesh):
+                self.logger.info("Showing results from structured mesh")
+                plt.contourf(xs[0, :], ys[0, :], fvar[0, :], 50, **kwargs)
+                plt.colorbar()
+            else:
+                self.logger.info("Showing element by element results on irregular grid")
+                plt_unstructured_results(self.fields.__res__.xnodesT[:, frame], self.fields.__res__.ynodesT[:, frame],
+                                         self.fields.__settings__.mesh.ele, fvar[:, 0, 0].flatten())
 
         if save_path is None:
             plt.show()
         else:
+            self.logger.info("Saving plot to %s"%save_path)
             if not os.path.exists(os.path.dirname(save_path)):
                 os.makedirs(os.path.dirname(save_path))
                 plt.savefig(save_path)

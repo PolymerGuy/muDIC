@@ -385,7 +385,7 @@ class DICAnalysis(object):
             >>> results = dic_job.run()
 
          """
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger(__name__)
 
         self.__input__ = self.__verify_dic_input__(inputs)
 
