@@ -340,14 +340,14 @@ class Fields(object):
         return ref.e, ref.n
 
 
-def plt_unstructured_results(xnodes, ynodes, elements, values, **kwargs):
+def plt_unstructured_results(xnodes, ynodes, con_mat, values, **kwargs):
     # From here: https://stackoverflow.com/questions/52202014/how-can-i-plot-2d-fem-results-using-matplotlib
     import matplotlib.pyplot as plt
     from matplotlib.collections import PolyCollection
 
     fig, ax = plt.subplots()
     yz = np.c_[xnodes, ynodes]
-    verts = yz[np.asarray(elements)]
+    verts = yz[np.asarray(con_mat.transpose())]
     pc = PolyCollection(verts, **kwargs)
     pc.set_array(values)
     ax.add_collection(pc)
@@ -457,9 +457,9 @@ class Visualizer(object):
             plt.contourf(xs[0, :], ys[0, :], fvar[0, :], 50, **kwargs)
             plt.colorbar()
         else:
-            self.logger.info("Showing results from irregular mesh")
+            self.logger.info("Showing element by element results on irregular grid")
             plt_unstructured_results(self.fields.__res__.xnodesT[:, frame], self.fields.__res__.ynodesT[:, frame],
-                                     self.fields.__settings__.mesh.ele.transpose(), fvar[:, 0, 0].flatten())
+                                     self.fields.__settings__.mesh.ele, fvar[:, 0, 0].flatten())
 
         if save_path is None:
             plt.show()
