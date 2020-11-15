@@ -575,18 +575,18 @@ class StructuredMesh(Mesh):
         self.n_elx = n_elx
         self.n_ely = n_ely
 
-    def single_element_mesh(self):
+    def single_element_mesh(self,deg_e=1,deg_n=1):
         """
         Convert mesh to a single element mesh
 
         NOTES:
             This functionality has been tested for Spline elements only
         """
-        n_elx = self.element_def.degree_e + 1
-        n_ely = self.element_def.degree_n + 1
+        n_elx = deg_e+1
+        n_ely = deg_n+1
         Xc1 = self.xnodes.min()
         Xc2 = self.xnodes.max()
         Yc1 = self.ynodes.min()
         Yc2 = self.ynodes.max()
 
-        return Mesher.gen_node_positions(self.element_def, Xc1, Yc1, Xc2, Yc2, n_elx, n_ely)
+        return Mesher.gen_node_positions(BSplineSurface(deg_e=deg_e,deg_n=deg_n), Xc1, Yc1, Xc2, Yc2, n_elx, n_ely)
