@@ -10,7 +10,7 @@ from ..elements.b_splines import BSplineSurface
 from ..elements.q4 import Q4
 
 
-def scale_to_unit(array):
+def scale_to_unity(array):
     return (array - array.min()) / (array.max() - array.min())
 
 
@@ -91,8 +91,8 @@ def mesh_from_abaqus(inpfile_name, unit_dim=False):
         raise IOError("Invalid Abaqus input file")
 
     if unit_dim:
-        xnodes = scale_to_unit(xnodes)
-        ynodes = scale_to_unit(ynodes)
+        xnodes = scale_to_unity(xnodes)
+        ynodes = scale_to_unity(ynodes)
 
     return Mesh(Q4(), xnodes, ynodes, con_mat)
 
@@ -267,7 +267,7 @@ class Mesher(object):
             self.Yc1 = min([y1, y2])
             self.Yc2 = max([y1, y2])
 
-            self._mesh_ = self.gen_node_positions(self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
+            self._mesh_ = self.gen_node_positions(self.element_def, self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
             render_mesh()
 
         def toggle_selector(event):
@@ -301,7 +301,7 @@ class Mesher(object):
                 self.Xc2 += 1
 
             try:
-                self._mesh_ = self.gen_node_positions(self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
+                self._mesh_ = self.gen_node_positions(self.element_def, self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
                 render_mesh()
 
             except:
@@ -347,30 +347,31 @@ class Mesher(object):
 
         plt.show(block=True)
 
-    def gen_node_positions(self, Xc1, Yc1, Xc2, Yc2, n_elx, n_ely):
+    @staticmethod
+    def gen_node_positions(element_def, Xc1, Yc1, Xc2, Yc2, n_elx, n_ely):
         logger = logging.getLogger(__name__)
         try:
-            if isinstance(self.element_def, Q4):
+            if isinstance(element_def, Q4):
                 logger.info("Using Q4 elements")
                 ele, xnodes, ynodes = make_grid_Q4(Xc1, Yc1, Xc2, Yc2,
                                                    n_elx,
-                                                   n_ely, self.element_def)
+                                                   n_ely, element_def)
 
                 logger.info('Element contains %.1f X %.1f pixels and is divided in %i X %i ' % (
                     (Xc2 - Xc1) / n_elx, (Yc2 - Yc1) / n_ely, n_elx, n_ely))
 
-                return Mesh(self.element_def, xnodes, ynodes, ele)
+                return StructuredMesh(element_def, xnodes, ynodes, ele, n_elx, n_ely)
 
-            elif isinstance(self.element_def, BSplineSurface):
+            elif isinstance(element_def, BSplineSurface):
                 logger.info("Using B-Spline elements")
                 ele, xnodes, ynodes = make_grid(Xc1, Yc1, Xc2, Yc2,
                                                 n_elx,
-                                                n_ely, self.element_def)
+                                                n_ely, element_def)
 
                 logger.info('Element contains %.1f X %.1f pixels and is divided in %i X %i ' % (
                     (Xc2 - Xc1) / n_elx, (Yc2 - Yc1) / n_ely, n_elx, n_ely))
 
-                return Mesh(self.element_def, xnodes, ynodes, ele)
+                return StructuredMesh(element_def, xnodes, ynodes, ele, n_elx, n_ely)
 
             else:
                 raise ValueError("Unknown element type")
@@ -398,7 +399,7 @@ class Mesher(object):
         self.n_elx = n_elx
         self.n_ely = n_ely
 
-        self._mesh_ = self.gen_node_positions(self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
+        self._mesh_ = self.gen_node_positions(self.element_def, self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
 
         if GUI:
             self.__gui__()
@@ -536,109 +537,54 @@ class Mesh(object):
         return self.center_mesh_at(center_x, center_y).scale_mesh_x(scale_x).scale_mesh_y(scale_y)
 
 
-class MeshStructured(object):
-    def __init__(self, element, corner1_x, corner2_x, corner1_y, corner2_y, n_elx, n_ely):
+
+class StructuredMesh(Mesh):
+    def __init__(self,element, xnodes, ynodes, con_mat,n_elx,n_ely):
         """
-        Mesh class
+         Structured Mesh class
 
-        Generates a grid based on the provided Finite Element definitions and geometrical measures.
-        The class contains methods for generating the grid and for moving and resizing the grid.
+         Contains a finite element mesh, defined by the finite element,
+         the nodal coordinates and the connectivity matrix.
 
-         Parameters
-         ----------
-        element : object
-            Instance of FiniteElement containing element definitions
-        Xc1 : float
-            X-Coordinate of upper left corner
-        Yc1 : float
-            Y-Coordinate of upper left corner
-        Xc2 : float
-            X-Coordinate of lower right corner
-        Yc2 : float
-            Y-Coordinate of lower right corner
-        n_elx : int
-            Number of elements in the x-direction
-        n_ely : int
-            Number of elements in the y-direction
-         Returns
-         -------
-        Mesh :  Mesh object
-         """
-        self.element_def = element
+         As the mesh is structured "forming a rectangular patch", n_elx and n_ely is used
+         to defined the shape of the grid.
 
-        self.Xc1 = corner1_x
-        self.Xc2 = corner2_x
-        self.Yc1 = corner1_y
-        self.Yc2 = corner2_y
+          Parameters
+          ----------
+         element : object
+             Instance of FiniteElement containing element definitions
+         xnodes : array
+             The X-coordinate of the nodes
+         ynodes : array
+             The Y-coordinate of the nodes
+         con_mat : array
+             The connectivity matrix, having the dimensions 4 x n_elements
+         n_elx   : int
+             The number of element in the X-direction
+         n_ely   : int
+             The number of element in the Y-direction
 
+        NOTES
+        -----
+        The object is intended to be immutable and all methods returns a new Mesh instance.
+        """
+        super().__init__(element, xnodes, ynodes, con_mat)
         self.n_elx = n_elx
         self.n_ely = n_ely
-
-        # Fields that are set after gen_mesh is called
-        self.xnodes = None
-        self.ynodes = None
-        self.n_nodes = None
-        self.n_elms = None
-        self.ele = None
-
-        self.gen_node_positions()
-
-    def scale_mesh_y(self, factor):
-        """
-        Scale mesh in the y direction by a factor
-
-
-         Parameters
-         ----------
-        factor : float
-            The factor which the mesh is scaled by in the y direction
-
-         """
-        center = (self.Yc2 + self.Yc1) / 2.
-        height = self.Yc2 - self.Yc1
-        self.Yc1 = center + (height / 2.) * factor
-        self.Yc2 = center - (height / 2.) * factor
-
-    def scale_mesh_x(self, factor):
-        """
-        Scale mesh in the x direction by a factor
-
-
-         Parameters
-         ----------
-        factor : float
-            The factor which the mesh is scaled by in the x direction
-
-         """
-        center = (self.Xc2 + self.Xc1) / 2.
-        height = self.Xc2 - self.Xc1
-        self.Xc1 = center + (height / 2.) * factor
-        self.Xc2 = center - (height / 2.) * factor
-
-    def center_mesh_at(self, center_point_x, center_point_y):
-        """
-        Center the mesh at coordinates
-
-
-         Parameters
-         ----------
-        center_pointx : float
-            The center point of the mesh in the x-direction
-        center_pointy : float
-            The center point of the mesh in the y-direction
-         """
-        width = self.Xc2 - self.Xc1
-        height = self.Yc2 - self.Yc1
-        self.Xc1 = center_point_x - (width / 2.)
-        self.Xc2 = center_point_x + (width / 2.)
-        self.Yc1 = center_point_y - (height / 2.)
-        self.Yc2 = center_point_y + (height / 2.)
 
     def single_element_mesh(self):
         """
         Convert mesh to a single element mesh
+
+        NOTES:
+            This functionality has been tested for Spline elements only
         """
-        self.n_elx = self.element_def.degree_e + 1
-        self.n_ely = self.element_def.degree_n + 1
-        self.n_elms = 1
-        self.gen_node_positions()
+        n_elx = self.element_def.degree_e + 1
+        n_ely = self.element_def.degree_n + 1
+        Xc1 = self.xnodes.min()
+        Xc2 = self.xnodes.max()
+        Yc1 = self.ynodes.min()
+        Yc2 = self.ynodes.max()
+
+        return Mesher.gen_node_positions(self.element_def,Xc1,Yc1,Xc2,Yc2,n_elx,n_ely)
+
