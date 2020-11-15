@@ -1,6 +1,7 @@
 import numpy as np
 from muDIC.solver.reference import find_covered_pixel_blocks
 from muDIC.elements.b_splines import BSplineSurface
+import logging
 
 
 
@@ -18,11 +19,11 @@ def initial_conds_from_analysis(org_mesh, target_mesh, dic_results):
 
 
     # TODO: Add Q4 support
-
+    logger = logging.getLogger(__name__)
     if not isinstance(org_mesh.element_def,BSplineSurface):
         raise NotImplementedError("Only B-spline elements are supported as original mesh")
 
-    print("The mesh translator is in Beta and may yield invalid results!")
+    logger.info("The mesh translator is in Beta and may yield invalid results!")
 
     # Find the element coordinates for the target mesh nodes
     es, ns, xs, ys = find_covered_pixel_blocks(org_mesh.xnodes.flatten(),
