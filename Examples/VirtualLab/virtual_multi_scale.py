@@ -10,9 +10,12 @@ import muDIC.vlab as vlab
 import muDIC as dic
 
 """
-This example case runs an experiment where a bi-harmonic deformation field is used
-to deform a synthetically generated speckle, the speckle is then downsampled by a factor of four
-and sensor artifacts are included.
+This example case runs an experiment where only rigid body motion is present.
+This demostrated the "multi-scale" functionality, which allows for an analysis to be performed with a single
+element to produce initial conditions for a more refined mesh.
+
+A rigid body displacement of 10 pixels is used to deform the image and the analysis will not run
+without getting initial conditions from a coarser mesh.
 
 The analysis is then performed and the resulting displacement field is compared to the
 one used to deform the images
@@ -25,27 +28,17 @@ show_results = True
 # Define the image you want to analyse
 n_imgs = 2
 image_shape = (500, 500)
-downsample_factor = 1
-super_image_shape = tuple(dim * downsample_factor for dim in image_shape)
 
 # Make a speckle image
-speckle_image = vlab.rosta_speckle(super_image_shape, dot_size=4, density=0.5, smoothness=2.0)
+speckle_image = vlab.rosta_speckle(image_shape, dot_size=4, density=0.5, smoothness=2.0)
 
 displacement_function = vlab.deformation_fields.rigid_body_x
 
 # Make an image deformed
 image_deformer = vlab.imageDeformer_from_uFunc(displacement_function, shift=10.)
 
-# Make an image down-sampler including downscaling, fill-factor and sensor grid irregularities
-downsampler = vlab.Downsampler(image_shape=super_image_shape, factor=downsample_factor, fill=.95,
-                               pixel_offset_stddev=0.05)
-
-# Make a noise injector producing 2% gaussian additive noise
-noise_injector = vlab.noise_injector("gaussian", sigma=.02)
-
 # Make an synthetic image generation pipeline
-image_generator = vlab.SyntheticImageGenerator(speckle_image=speckle_image, image_deformer=image_deformer,
-                                               downsampler=downsampler, noise_injector=noise_injector, n=n_imgs)
+image_generator = vlab.SyntheticImageGenerator(speckle_image=speckle_image, image_deformer=image_deformer, n=n_imgs)
 # Put it into an image stack
 image_stack = dic.ImageStack(image_generator)
 
