@@ -11,7 +11,7 @@ from .reference_q4 import generate_reference_Q4, find_elm_borders_mesh, normaliz
 from ..IO.image_stack import ImageStack
 from ..elements.b_splines import BSplineSurface
 from ..elements.q4 import Q4
-from ..mesh.meshUtilities import MeshStructured, Mesh
+from ..mesh.meshUtilities import StructuredMesh, Mesh
 from ..utils import convert_to_img_frame, find_element_borders
 
 
@@ -25,7 +25,7 @@ def correlate_img_to_ref_spline(node_pos, img, ref, settings):
     ----------
     node_pos : ndarray
        The position of the nodes
-    mesh : MeshStructured
+    mesh : StructuredMesh
        The mesh object
     img : ndarray
        2d array containing the image
@@ -59,7 +59,7 @@ def correlate_frames(node_pos, mesh, img, ref, settings):
     ----------
     node_pos : ndarray
        The position of the nodes
-    mesh : MeshStructured
+    mesh : StructuredMesh
        The mesh object
     img : ndarray
        2d array containing the image frame
@@ -438,7 +438,7 @@ class DICAnalysis(object):
         if not isinstance(inputs_checked.images, (ImageStack)):
             raise TypeError('Image stack is not an instance of ImageStack')
 
-        if not isinstance(inputs_checked.mesh, MeshStructured) and not isinstance(inputs_checked.mesh, Mesh):
+        if not isinstance(inputs_checked.mesh, StructuredMesh) and not isinstance(inputs_checked.mesh, Mesh):
             raise TypeError('Mesh should be an instance of Mesh')
 
         if isinstance(inputs_checked.max_nr_im, int) and inputs_checked.max_nr_im <= len(inputs_checked.images):

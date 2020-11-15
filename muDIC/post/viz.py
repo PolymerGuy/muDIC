@@ -5,7 +5,7 @@ import numpy as np
 from scipy.ndimage import map_coordinates
 from muDIC.elements.b_splines import BSplineSurface
 from muDIC.elements.q4 import Q4
-from muDIC.mesh.meshUtilities import MeshStructured
+from muDIC.mesh.meshUtilities import StructuredMesh
 
 
 class Fields(object):
@@ -66,7 +66,8 @@ class Fields(object):
         # with the same dimensions as the mesh. If up-scaling is used, we determine the values between element centers
         # by using 3rd order spline interpolation.
 
-        if q4 and isinstance(self.__settings__.mesh, MeshStructured):
+        if q4 and isinstance(self.__settings__.mesh, StructuredMesh):
+            self.logger.info("Found structured grid")
             # Flatten things form multiple elements to a grid of elements
             grid_shape = (self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx)
             n_frames = self.__F__.shape[-1]

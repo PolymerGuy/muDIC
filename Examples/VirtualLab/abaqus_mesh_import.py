@@ -18,9 +18,11 @@ are plotted using a rudimentary visualization tool.
 """
 
 mesh = dic.mesh_from_abaqus('./abaqusMeshes/ring.inp', unit_dim=True)
-mesh.center_mesh_at(1000, 1000)
-mesh.scale_mesh_x(1800)
-mesh.scale_mesh_y(1800)
+
+# You can move the mesh to the desired position like this
+mesh = mesh.center_mesh_at(1000, 1000).scale_mesh_x(1800).scale_mesh_y(1800)
+# or like this
+mesh = mesh.fit_to_box(200, 1800, 200, 1800)
 
 # Set the amount of info printed to terminal during analysis
 logging.basicConfig(format='%(name)s:%(levelname)s:%(message)s', level=logging.INFO)
@@ -55,11 +57,11 @@ image_generator = vlab.SyntheticImageGenerator(speckle_image=speckle_image, imag
 image_stack = dic.ImageStack(image_generator)
 
 # Prepare the analysis input and initiate the analysis
-input = dic.DICInput(mesh, image_stack)
-input.tol = 1e-6
-input.interpolation_order = 4
+inputDIC = dic.DICInput(mesh, image_stack)
+inputDIC.tol = 1e-6
+inputDIC.interpolation_order = 4
 
-dic_job = dic.DICAnalysis(input)
+dic_job = dic.DICAnalysis(inputDIC)
 results = dic_job.run()
 
 fields = dic.Fields(results)
@@ -83,5 +85,4 @@ def plt_unstructured_results(xnodes, ynodes, elements, values, **kwargs):
 
 values = fields.disp()[:, 0, 0, 0, -1]
 
-plt.imshow(image_stack[0], cmap=plt.cm.gray)
 plt_unstructured_results(mesh.xnodes, mesh.ynodes, mesh.ele.transpose(), values)
