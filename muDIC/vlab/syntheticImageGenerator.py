@@ -2,10 +2,10 @@ import numpy as np
 
 from . import image_deformer as cordmap
 from .downsampler import Downsampler
-
+import logging
 
 class SyntheticImageGenerator(object):
-    def __init__(self, speckle_image, image_deformer, downsampler, noise_injector, n=10):
+    def __init__(self, speckle_image, image_deformer, downsampler=None, noise_injector=None, n=10):
         """Virtual experiment
 
         This class sets up a simple pipeline for generating a set of synthetically generated
@@ -58,15 +58,16 @@ class SyntheticImageGenerator(object):
             The speckle image.
         image_deformer : instance of ImageDeformer
             ImageDeformer deforms an image according to the coordinate mapper given to it upon instantiation
-        downsampler: instance of Downsampler
+        downsampler optional: instance of Downsampler
             Downsampler downsamples an image according to the settings given to it upon instantiation
-        noise_injector: noise injection function
+        noise_injector optional: noise injection function
             noise_injector is a function which takes an image and returns an image with noise
         n : int
             Number of frames to be deformed
         """
 
         self.n_images = n
+        self.logger = logging.getLogger(__name__)
 
         if isinstance(speckle_image, np.ndarray):
             if speckle_image.ndim != 2:
@@ -76,20 +77,23 @@ class SyntheticImageGenerator(object):
         if isinstance(image_deformer, cordmap.ImageDeformer):
             self._image_deformer_ = image_deformer
         else:
-            raise ValueError("Only instances of CoordinateMapper are accepted")
+            raise ValueError("An instances of CoordinateMapper is needed")
 
         # If a speckle image is provided, generate a matching down sampler
         if isinstance(downsampler, Downsampler):
             self.down_sampler = downsampler
+            self.logger.info("Valid downsampler received")
         else:
-            raise ValueError("Only instances of Downsampler are accepted")
-
-        if noise_injector is None:
-            raise ValueError("Noise_injector must be specified")
+            self.down_sampler = lambda x:x
 
 
 
-        self.noise_injector = noise_injector
+        if noise_injector is not None:
+            self.noise_injector = noise_injector
+        else:
+            self.noise_injector = lambda x:x
+
+
 
         self._deformed_images_ = self._image_deformer_(self.speckle_image, steps=self.n_images)
 
