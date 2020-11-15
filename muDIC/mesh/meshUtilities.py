@@ -220,10 +220,26 @@ class Mesher(object):
          -------
         Mesh :  Mehser object
          """
-
+        self.logger = logging.getLogger()
         self.deg_e = deg_e
         self.deg_n = deg_n
-        self.type = type
+        self.n_elx = None
+        self.n_ely = None
+        self.Xc1 = None
+        self.Xc2 = None
+        self.Yc1 = None
+        self.Yc2 = None
+
+        self.element_def = None
+
+        if type.lower() == "q4":
+            self.logger.info("Using Q4 elements")
+            self.element_def = Q4()
+        elif type.lower() == "spline":
+            self.logger.info("Using B-spline elements")
+            self.element_def = BSplineSurface(self.deg_e, self.deg_n)
+        else:
+            raise ValueError("No valid element type received")
 
     def __gui__(self):
         from matplotlib.widgets import Button, RectangleSelector
@@ -246,48 +262,47 @@ class Mesher(object):
             x1, y1 = eclick.xdata, eclick.ydata
             x2, y2 = erelease.xdata, erelease.ydata
 
-            self._mesh_.Xc1 = min([x1, x2])
-            self._mesh_.Xc2 = max([x1, x2])
-            self._mesh_.Yc1 = min([y1, y2])
-            self._mesh_.Yc2 = max([y1, y2])
+            self.Xc1 = min([x1, x2])
+            self.Xc2 = max([x1, x2])
+            self.Yc1 = min([y1, y2])
+            self.Yc2 = max([y1, y2])
 
-            self._mesh_.gen_node_positions()
+            self._mesh_ = self.gen_node_positions(self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
             render_mesh()
 
         def toggle_selector(event):
 
             if event.key in ['W', 'w']:
-                self._mesh_.n_ely += 1
+                self.n_ely += 1
 
             if event.key in ['X', 'x']:
-                self._mesh_.n_ely -= 1
+                self.n_ely -= 1
 
             if event.key in ['A', 'a']:
-                self._mesh_.n_elx += 1
+                self.n_elx += 1
 
             if event.key in ['D', 'd']:
-                self._mesh_.n_elx -= 1
+                self.n_elx -= 1
 
             if event.key in ['up']:
-                self._mesh_.Yc1 -= 1
-                self._mesh_.Yc2 -= 1
+                self.Yc1 -= 1
+                self.Yc2 -= 1
 
             if event.key in ['down']:
-                self._mesh_.Yc1 += 1
-                self._mesh_.Yc2 += 1
+                self.Yc1 += 1
+                self.Yc2 += 1
 
             if event.key in ['left']:
-                self._mesh_.Xc1 -= 1
-                self._mesh_.Xc2 -= 1
+                self.Xc1 -= 1
+                self.Xc2 -= 1
 
             if event.key in ['right']:
-                self._mesh_.Xc1 += 1
-                self._mesh_.Xc2 += 1
+                self.Xc1 += 1
+                self.Xc2 += 1
 
             try:
-                self._mesh_.gen_node_positions()
+                self._mesh_ = self.gen_node_positions(self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
                 render_mesh()
-                pass
 
             except:
                 pass
@@ -332,7 +347,38 @@ class Mesher(object):
 
         plt.show(block=True)
 
-    def mesh(self, images, Xc1=0.0, Xc2=100.0, Yc1=0.0, Yc2=100., n_elx=4, n_ely=4, GUI=True, **kwargs):
+    def gen_node_positions(self, Xc1, Yc1, Xc2, Yc2, n_elx, n_ely):
+        logger = logging.getLogger(__name__)
+        try:
+            if isinstance(self.element_def, Q4):
+                logger.info("Using Q4 elements")
+                ele, xnodes, ynodes = make_grid_Q4(Xc1, Yc1, Xc2, Yc2,
+                                                   n_elx,
+                                                   n_ely, self.element_def)
+
+                logger.info('Element contains %.1f X %.1f pixels and is divided in %i X %i ' % (
+                    (Xc2 - Xc1) / n_elx, (Yc2 - Yc1) / n_ely, n_elx, n_ely))
+
+                return Mesh(self.element_def, xnodes, ynodes, ele)
+
+            elif isinstance(self.element_def, BSplineSurface):
+                logger.info("Using B-Spline elements")
+                ele, xnodes, ynodes = make_grid(Xc1, Yc1, Xc2, Yc2,
+                                                n_elx,
+                                                n_ely, self.element_def)
+
+                logger.info('Element contains %.1f X %.1f pixels and is divided in %i X %i ' % (
+                    (Xc2 - Xc1) / n_elx, (Yc2 - Yc1) / n_ely, n_elx, n_ely))
+
+                return Mesh(self.element_def, xnodes, ynodes, ele)
+
+            else:
+                raise ValueError("Unknown element type")
+
+        except Exception as e:
+            logger.exception("Mesh generation failed")
+
+    def mesh(self, images, Xc1=0.0, Xc2=100.0, Yc1=0.0, Yc2=100., n_elx=4, n_ely=4, GUI=True):
         if isinstance(images, (ImageStack)):
             self.image = images[0]
         else:
@@ -342,16 +388,17 @@ class Mesher(object):
             raise TypeError("Coordinates should be given as floats")
 
         if not type(n_elx) == int and type(n_ely) == int:
-            raise TypeError("Coordinates should be given as floats")
+            raise TypeError("Number of elements should be given as integers")
 
-        if self.type == "spline":
+        self.Xc1 = Xc1
+        self.Xc2 = Xc2
+        self.Yc1 = Yc1
+        self.Yc2 = Yc2
 
-            element = BSplineSurface(self.deg_e, self.deg_n, **kwargs)
+        self.n_elx = n_elx
+        self.n_ely = n_ely
 
-        else:
-            element = Q4()
-
-        self._mesh_ = MeshStructured(element, Xc1, Xc2, Yc1, Yc2, n_elx, n_ely)
+        self._mesh_ = self.gen_node_positions(self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
 
         if GUI:
             self.__gui__()
@@ -535,38 +582,6 @@ class MeshStructured(object):
         self.ele = None
 
         self.gen_node_positions()
-
-    def gen_node_positions(self):
-        logger = logging.getLogger(__name__)
-        try:
-            if isinstance(self.element_def, Q4):
-                logger.info("Using Q4 elements")
-                self.ele, self.xnodes, self.ynodes = make_grid_Q4(self.Xc1, self.Yc1, self.Xc2, self.Yc2,
-                                                                  self.n_elx,
-                                                                  self.n_ely, self.element_def)
-
-                logger.info('Element contains %.1f X %.1f pixels and is divided in %i X %i ' % (
-                    (self.Xc2 - self.Xc1) / self.n_elx, (self.Yc2 - self.Yc1) / self.n_ely, self.n_elx, self.n_ely))
-
-                self.n_nodes = len(self.xnodes)
-                self.n_elms = self.n_elx * self.n_ely
-            elif isinstance(self.element_def, BSplineSurface):
-                logger.info("Using B-Spline elements")
-                self.ele, self.xnodes, self.ynodes = make_grid(self.Xc1, self.Yc1, self.Xc2, self.Yc2,
-                                                               self.n_elx,
-                                                               self.n_ely, self.element_def)
-
-                logger.info('Element contains %.1f X %.1f pixels and is divided in %i X %i ' % (
-                    (self.Xc2 - self.Xc1) / self.n_elx, (self.Yc2 - self.Yc1) / self.n_ely, self.n_elx, self.n_ely))
-
-                self.n_nodes = len(self.xnodes)
-                self.n_elms = 1
-
-            else:
-                raise ValueError("Unknown element type")
-
-        except Exception as e:
-            logger.exception("Mesh generation failed")
 
     def scale_mesh_y(self, factor):
         """
