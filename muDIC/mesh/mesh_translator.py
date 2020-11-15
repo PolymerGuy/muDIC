@@ -4,7 +4,7 @@ from muDIC.elements.b_splines import BSplineSurface
 
 
 
-def mesh_translator(org_mesh, target_mesh, dic_results):
+def initial_conds_from_analysis(org_mesh, target_mesh, dic_results):
     """
    Mesh translator maps the nodal position history obtained with org_mesh to the corresponding
    nodal position history for target_mesh.
