@@ -223,6 +223,7 @@ class Mesher(object):
         self.logger = logging.getLogger()
         self.deg_e = deg_e
         self.deg_n = deg_n
+
         self.n_elx = None
         self.n_ely = None
         self.Xc1 = None
@@ -233,7 +234,7 @@ class Mesher(object):
         self.element_def = None
 
         if type.lower() == "q4":
-            self.logger.info("Using Q4 elements")
+            self.logger.info("Using Q4 elements with linear shape functions.")
             self.element_def = Q4()
         elif type.lower() == "spline":
             self.logger.info("Using B-spline elements")
@@ -267,7 +268,8 @@ class Mesher(object):
             self.Yc1 = min([y1, y2])
             self.Yc2 = max([y1, y2])
 
-            self._mesh_ = self.gen_node_positions(self.element_def, self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
+            self._mesh_ = self.gen_node_positions(self.element_def, self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx,
+                                                  self.n_ely)
             render_mesh()
 
         def toggle_selector(event):
@@ -301,7 +303,8 @@ class Mesher(object):
                 self.Xc2 += 1
 
             try:
-                self._mesh_ = self.gen_node_positions(self.element_def, self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
+                self._mesh_ = self.gen_node_positions(self.element_def, self.Xc1, self.Yc1, self.Xc2, self.Yc2,
+                                                      self.n_elx, self.n_ely)
                 render_mesh()
 
             except:
@@ -399,7 +402,8 @@ class Mesher(object):
         self.n_elx = n_elx
         self.n_ely = n_ely
 
-        self._mesh_ = self.gen_node_positions(self.element_def, self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx, self.n_ely)
+        self._mesh_ = self.gen_node_positions(self.element_def, self.Xc1, self.Yc1, self.Xc2, self.Yc2, self.n_elx,
+                                              self.n_ely)
 
         if GUI:
             self.__gui__()
@@ -457,7 +461,7 @@ class Mesh(object):
         center = (np.max(self.ynodes) + np.min(self.ynodes)) / 2.
         ynodes = factor * (self.ynodes - center) + center
 
-        return Mesh(self.element_def, self.xnodes, ynodes, self.ele)
+        return self.__class__(self.element_def, self.xnodes, ynodes, self.ele)
 
     def scale_mesh_x(self, factor):
         """
@@ -477,7 +481,7 @@ class Mesh(object):
          """
         center = (np.max(self.xnodes) + np.min(self.xnodes)) / 2.
         xnodes = factor * (self.xnodes - center) + center
-        return Mesh(self.element_def, xnodes, self.ynodes, self.ele)
+        return self.__class__(self.element_def, xnodes, self.ynodes, self.ele)
 
     def center_mesh_at(self, center_point_x, center_point_y):
         """
@@ -505,7 +509,7 @@ class Mesh(object):
         xnodes = self.xnodes - shift_x
         ynodes = self.ynodes - shift_y
 
-        return Mesh(self.element_def, xnodes, ynodes, self.ele)
+        return self.__class__(self.element_def, xnodes, ynodes, self.ele)
 
     def fit_to_box(self, corner1_x, corner2_x, corner1_y, corner2_y):
         """
@@ -537,9 +541,8 @@ class Mesh(object):
         return self.center_mesh_at(center_x, center_y).scale_mesh_x(scale_x).scale_mesh_y(scale_y)
 
 
-
 class StructuredMesh(Mesh):
-    def __init__(self,element, xnodes, ynodes, con_mat,n_elx,n_ely):
+    def __init__(self, element, xnodes, ynodes, con_mat, n_elx, n_ely):
         """
          Structured Mesh class
 
@@ -586,5 +589,4 @@ class StructuredMesh(Mesh):
         Yc1 = self.ynodes.min()
         Yc2 = self.ynodes.max()
 
-        return Mesher.gen_node_positions(self.element_def,Xc1,Yc1,Xc2,Yc2,n_elx,n_ely)
-
+        return Mesher.gen_node_positions(self.element_def, Xc1, Yc1, Xc2, Yc2, n_elx, n_ely)
