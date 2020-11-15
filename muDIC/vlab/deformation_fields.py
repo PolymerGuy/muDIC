@@ -60,6 +60,34 @@ def linear_x(xs, _, slope=0.001, frame=1):
     return xs_mapped, np.zeros_like(xs_mapped)
 
 
+def rigid_body_x(xs, _, shift=1.0, frame=1):
+    """
+    Displacement field corresponding to a rigid shift along X
+
+
+    Parameters
+    ----------
+    xs : array
+        The x-coodinates
+    ys : array
+        The y-coordinates
+    shift : float
+        Rigid body displacement along X
+
+
+    Returns
+    -------
+    u_x,u_y : array
+        The displacement field values in each direction
+
+    """
+
+
+    xs_mapped = float(frame) * shift * np.ones_like(xs)
+    return xs_mapped, np.zeros_like(xs_mapped)
+
+
+
 def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, frame=1):
     """
     Displacement field being sinusoidal along the both axes
