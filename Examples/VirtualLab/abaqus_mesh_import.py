@@ -66,23 +66,15 @@ results = dic_job.run()
 
 fields = dic.Fields(results)
 
+# Show a field
+viz = dic.Visualizer(fields,images=image_stack)
 
-def plt_unstructured_results(xnodes, ynodes, elements, values, **kwargs):
-    # From here: https://stackoverflow.com/questions/52202014/how-can-i-plot-2d-fem-results-using-matplotlib
-    import matplotlib.pyplot as plt
-    from matplotlib.collections import PolyCollection
-
-    fig, ax = plt.subplots()
-    yz = np.c_[xnodes, ynodes]
-    verts = yz[np.asarray(elements)]
-    pc = PolyCollection(verts, **kwargs)
-    pc.set_array(values)
-    ax.add_collection(pc)
-    ax.autoscale()
-    fig.colorbar(pc, ax=ax)
-    plt.show()
+# Uncomment the line below to see the results
+viz.show(field="displacement", component = (0,0), frame=-1)
 
 
-values = fields.disp()[:, 0, 0, 0, -1]
 
-plt_unstructured_results(mesh.xnodes, mesh.ynodes, mesh.ele.transpose(), values)
+
+#values = fields.disp()[:, 0, 0, 0, -1]
+
+#plt_unstructured_results(mesh.xnodes, mesh.ynodes, mesh.ele.transpose(), values)
