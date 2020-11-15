@@ -67,6 +67,7 @@ class Fields(object):
         # by using 3rd order spline interpolation.
 
         if q4 and isinstance(self.__settings__.mesh, MeshStructured):
+            self.logger.info("Found structured grid")
             # Flatten things form multiple elements to a grid of elements
             grid_shape = (self.__settings__.mesh.n_ely, self.__settings__.mesh.n_elx)
             n_frames = self.__F__.shape[-1]
