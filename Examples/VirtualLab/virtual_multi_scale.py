@@ -23,7 +23,7 @@ one used to deform the images
 
 # Set the amount of info printed to terminal during analysis
 logging.basicConfig(format='%(name)s:%(levelname)s:%(message)s', level=logging.INFO)
-show_results = True
+show_results = False
 
 # Define the image you want to analyse
 n_imgs = 2
