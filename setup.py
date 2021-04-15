@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="muDIC",
-    version="0.2.0",
+    version="0.2.1",
     author="PolymerGuy",
     author_email="sindre.n.olufsen@ntnu.no",
     description="A digital image correlation toolkit",
