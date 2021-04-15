@@ -184,12 +184,12 @@ def identify_pixels_within_frame(xnod, ynod, elm, over_sampling=1.1):
     y_min, y_max = find_borders(ynod)
 
     # Calculate coordinates (e,n) covered by the element on a fine grid
-    n_search_pixels = np.int(over_sampling * max((x_max - x_min), y_max - y_min))
+    n_search_pixels = int(over_sampling * max((x_max - x_min), y_max - y_min))
     es, ns = np.meshgrid(np.linspace(0., 1., n_search_pixels), np.linspace(0., 1., n_search_pixels))
     es = es.flatten()
     ns = ns.flatten()
 
-    num_blocks = np.ceil(len(es) / chunk_size).astype(np.int)
+    num_blocks = np.ceil(len(es) / chunk_size).astype(int)
     logger.info("Splitting in %i block"%num_blocks)
 
 
@@ -205,17 +205,17 @@ def identify_pixels_within_frame(xnod, ynod, elm, over_sampling=1.1):
         pixel_ys = np.append(pixel_ys, np.dot(elm.Nn(es_blocks[i], ns_blocks[i]), ynod))
 
 
-    pixel_xs_closest = np.around(pixel_xs).astype(np.int)
-    pixel_ys_closest = np.around(pixel_ys).astype(np.int)
+    pixel_xs_closest = np.around(pixel_xs).astype(int)
+    pixel_ys_closest = np.around(pixel_ys).astype(int)
 
     xs_ys = np.stack([pixel_xs_closest, pixel_ys_closest], axis=0)
     xs_ys_unique, unique_inds = np.unique(xs_ys, return_index=True, axis=1)
 
-    pixel_x = xs_ys_unique[0, :].astype(np.float64)
-    pixel_y = xs_ys_unique[1, :].astype(np.float64)
+    pixel_x = xs_ys_unique[0, :].astype(float)
+    pixel_y = xs_ys_unique[1, :].astype(float)
 
-    pixel_es = es[unique_inds].astype(np.float64)
-    pixel_ns = ns[unique_inds].astype(np.float64)
+    pixel_es = es[unique_inds].astype(float)
+    pixel_ns = ns[unique_inds].astype(float)
 
     return pixel_x, pixel_y, pixel_es, pixel_ns
 
@@ -285,8 +285,7 @@ def find_covered_pixel_blocks(node_x, node_y, elm,xs=None,ys=None,keep_all=False
 
     block_size = 1.e5
     # Split into blocks
-    #n_pix_in_block = block_size / np.float(len(node_x))
-    num_blocks = np.ceil(len(pix_es) / block_size).astype(np.int)
+    num_blocks = np.ceil(len(pix_es) / block_size).astype(int)
     logger.info("Splitting in %s blocks:" % str(num_blocks))
 
     pix_e_blocks = np.array_split(pix_es, num_blocks)
@@ -339,8 +338,8 @@ def find_covered_pixel_blocks(node_x, node_y, elm,xs=None,ys=None,keep_all=False
 
                 found_e.append(epE_block)
                 founc_n.append(nyE_block)
-                found_x.append(Xe_block.astype(np.int))
-                found_y.append(Ye_block.astype(np.int))
+                found_x.append(Xe_block.astype(int))
+                found_y.append(Ye_block.astype(int))
 
                 break
             if (i + 1) == max_iter:

@@ -20,7 +20,7 @@ class TestVirtualTensileTest(TestCase):
         cls.image = vlab.speckle.dots_speckle(cls.img_shape, n_dots=10000, dot_radius_max=10)
 
     def test__pass_through_user_img(self):
-        F = np.eye(2, dtype=np.float)
+        F = np.eye(2, dtype=float)
         image_deformer = vlab.imageDeformer_from_defGrad(F)
 
         downsampler = vlab.Downsampler(image_shape=self.img_shape, factor=1, fill=1., pixel_offset_stddev=0.0)

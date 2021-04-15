@@ -28,7 +28,7 @@ class Finite_Element(object):
                 [np.ones(np.size(x)), x, y, x * y, x ** 2., y ** 2., x ** 2. * y, x * y ** 2., x ** 3., y ** 3.,
                  x ** 3. * y,
                  x ** 2. * y ** 2., x * y ** 3., x ** 3. * y ** 2., x ** 2. * y ** 3., x ** 3. * y ** 3.][:n_terms],
-                dtype=np.float64).transpose()
+                dtype=float).transpose()
 
         return fx_full
 
@@ -46,7 +46,7 @@ class Finite_Element(object):
 
                  2. * x * y, y ** 2, 3. * x ** 2, np.zeros(np.size(x)),
                  3. * x ** 2. * y, 2. * x * y ** 2., y ** 3., 3. * x ** 2. * y ** 2., 2. * x * y ** 3.,
-                 3. * x ** 2. * y ** 3.][:n_terms], dtype=np.float64).transpose()
+                 3. * x ** 2. * y ** 3.][:n_terms], dtype=float).transpose()
 
         return dxfx_full
 
@@ -63,14 +63,14 @@ class Finite_Element(object):
                 [np.zeros(np.size(x)), np.zeros(np.size(x)), np.ones(np.size(x)), x, np.zeros(np.size(x)), 2. * y,
                  x ** 2., 2. * x * y, np.zeros(np.size(x)), 3. * y ** 2.,
                  x ** 3., 2. * x ** 2. * y, 3. * x * y ** 2., 2. * x ** 3. * y, 3. * x ** 2. * y ** 2.,
-                 3. * x ** 3. * y ** 2.][:n_terms], dtype=np.float64).transpose()
+                 3. * x ** 3. * y ** 2.][:n_terms], dtype=float).transpose()
 
         return dyfx_full
 
     def determineCoefficients(self):
         A = self.fx(self.nodal_xpos, self.nodal_ypos)
         Ainv = np.linalg.inv(A)
-        a = np.zeros((self.n_nodes, self.n_nodes), dtype=np.float64)
+        a = np.zeros((self.n_nodes, self.n_nodes), dtype=float)
         for i in range(self.n_nodes):
             s = np.zeros(self.n_nodes)
             s[i] = 1.
@@ -93,9 +93,9 @@ class Q4(Finite_Element):
         Quadratic 4-noded Finite Element
         Uses bi-linear interpolation polynomials
         """
-        self.nodal_xpos = np.array([0., 1., 1., 0.], dtype=np.float64)
+        self.nodal_xpos = np.array([0., 1., 1., 0.], dtype=float)
 
-        self.nodal_ypos = np.array([0., 0., 1., 1.], dtype=np.float64)
+        self.nodal_ypos = np.array([0., 0., 1., 1.], dtype=float)
         self.n_nodes = 4
         self.corner_nodes = np.array([0, 1, 2, 3])
         Finite_Element.__init__(self, 1)

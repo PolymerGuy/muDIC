@@ -19,7 +19,7 @@ def convert_to_img_frame(img, node_position, mesh, borders, settings):
 def generate_edge_coordinates(seed):
     seeding = np.linspace(0., 1., seed)
     es, ns = np.meshgrid(seeding, seeding)
-    mask = np.ones_like(es, dtype=np.bool)
+    mask = np.ones_like(es, dtype=bool)
     mask[1:-1, 1:-1] = 0
     return es[mask], ns[mask]
 
@@ -34,7 +34,7 @@ def find_element_borders(node_position, mesh, seed=20):
 
     axis = None
     # [Xmin_Xmax,Ymin,Ymax,elm_nr]
-    borders = np.zeros((4, mesh.n_elms), dtype=np.int)
+    borders = np.zeros((4, mesh.n_elms), dtype=int)
     borders[0, :] = np.min(pixel_x, axis=axis)
     borders[1, :] = np.max(pixel_x, axis=axis)
     borders[2, :] = np.min(pixel_y, axis=axis)

@@ -241,15 +241,15 @@ def correlate_img_to_ref_q4(node_coordss, img, ref, settings):
 
     img = nd.spline_filter(img, order=settings.interpolation_order)
 
-    pix_cord_local = [np.zeros((2, ref.Nref_stack[elm_nr].shape[0]), dtype=np.float64) for elm_nr in
+    pix_cord_local = [np.zeros((2, ref.Nref_stack[elm_nr].shape[0]), dtype=float) for elm_nr in
                       range(settings.mesh.n_elms)]
 
     n_nodes = settings.mesh.n_nodes
     n_nodes_elm = settings.mesh.element_def.n_nodes
 
-    di = np.zeros(n_nodes_elm * 2, dtype=np.float64)
-    dnod = np.zeros(n_nodes * 2, dtype=np.float64)
-    C = np.zeros(n_nodes * 2, dtype=np.float64)
+    di = np.zeros(n_nodes_elm * 2, dtype=float)
+    dnod = np.zeros(n_nodes * 2, dtype=float)
+    C = np.zeros(n_nodes * 2, dtype=float)
 
     # Find borders of the elements
     borders = find_elm_borders_mesh(node_coords, settings.mesh, settings.mesh.n_elms)
@@ -269,7 +269,7 @@ def correlate_img_to_ref_q4(node_coordss, img, ref, settings):
         C[:] = 0.0
 
         for el in range(settings.mesh.n_elms):
-            Ic = np.zeros_like(ref.I0_stack[el], dtype=np.float64)
+            Ic = np.zeros_like(ref.I0_stack[el], dtype=float)
             # Find current coordinates element within the elm_frame
             np.dot(ref.Nref_stack[el], node_coords[0, settings.mesh.ele[:, el]] - borders[0, el] + settings.pad,
                    out=pix_cord_local[el][1])
@@ -338,7 +338,7 @@ class DICAnalysis(object):
             >>> image_shape = (2000, 2000)
             >>> speckle_image = vlab.rosta_speckle(image_shape, dot_size=4, density=0.32, smoothness=2.0, layers=4)
 
-            >>> F = np.array([[1.1, .0], [0., 1.0]], dtype=np.float64)
+            >>> F = np.array([[1.1, .0], [0., 1.0]], dtype=float)
             >>> image_deformer = vlab.imageDeformer_from_defGrad(F)
             >>> downsampler = vlab.Downsampler(image_shape=image_shape, factor=4, fill=0.8, pixel_offset_stddev=0.1)
             >>> noise_injector = vlab.noise_injector("gaussian", sigma=.1)

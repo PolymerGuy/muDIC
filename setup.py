@@ -15,7 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         'numba',
-        'scipy == 1.2.1',
+        'scipy',
         'matplotlib',
         'numpy',
         'Pillow',

@@ -94,14 +94,14 @@ class TestFullDICCore(TestCase):
 
         # Make empty matrix for storing deformation gradients
         F_correct_at_frame = np.zeros((n_frames, 2, 2))
-        F_correct_at_frame[0, :, :] = np.eye(2, dtype=np.float)
+        F_correct_at_frame[0, :, :] = np.eye(2, dtype=float)
 
         print("F Correct:", F_correct)
 
         for i in range(n_frames - 1):
             F_correct_at_frame[i + 1] = np.dot(F_correct_at_frame[i], F_correct)
 
-        F_correct_deviatior = F_correct_at_frame - np.eye(2, dtype=np.float)[np.newaxis, :, :]
+        F_correct_deviatior = F_correct_at_frame - np.eye(2, dtype=float)[np.newaxis, :, :]
 
         F11_abs_error = np.zeros((F11.shape[1], F11.shape[2], F11.shape[3]))
         F12_abs_error = np.zeros_like(F11_abs_error)
@@ -167,7 +167,7 @@ class TestFullDICCore(TestCase):
     def test_deg1_rotation(self):
         element = dic.elements.BSplineSurface(deg_e=1, deg_n=1)
         theta = 0.01
-        F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+        F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
@@ -176,8 +176,8 @@ class TestFullDICCore(TestCase):
         element = dic.elements.BSplineSurface(deg_e=1, deg_n=1)
 
         theta = 0.01
-        F_rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
-        F_biax = np.array([[1.001, 0.], [0., 0.999]], dtype=np.float64)
+        F_rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=float)
+        F_biax = np.array([[1.001, 0.], [0., 0.999]], dtype=float)
         F = np.dot(F_rot, F_biax)
         # print F
 
@@ -186,14 +186,14 @@ class TestFullDICCore(TestCase):
 
     def test_deg1_biaxial(self):
         element = dic.elements.BSplineSurface(deg_e=1, deg_n=1)
-        F = np.array([[1.001, 0.], [0., 0.999]], dtype=np.float64)
+        F = np.array([[1.001, 0.], [0., 0.999]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
 
     def test_deg1_simple_shear(self):
         element = dic.elements.BSplineSurface(deg_e=1, deg_n=1)
-        F = np.array([[1.00, .005], [0., 1.]], dtype=np.float64)
+        F = np.array([[1.00, .005], [0., 1.]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
@@ -202,7 +202,7 @@ class TestFullDICCore(TestCase):
         element = dic.elements.BSplineSurface(deg_e=2, deg_n=2)
 
         theta = 0.01
-        F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+        F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=float)
         # print F
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
@@ -210,14 +210,14 @@ class TestFullDICCore(TestCase):
 
     def test_deg2_biaxial(self):
         element = dic.elements.BSplineSurface(deg_e=2, deg_n=2)
-        F = np.array([[1.001, 0.], [0., .999]], dtype=np.float64)
+        F = np.array([[1.001, 0.], [0., .999]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
 
     def test_deg2_simple_shear(self):
         element = dic.elements.BSplineSurface(deg_e=2, deg_n=2)
-        F = np.array([[1.00, .005], [0., 1.]], dtype=np.float64)
+        F = np.array([[1.00, .005], [0., 1.]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
@@ -226,7 +226,7 @@ class TestFullDICCore(TestCase):
         element = dic.elements.BSplineSurface(deg_e=3, deg_n=3)
 
         theta = 0.01
-        F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+        F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=float)
         # print F
 
         passed = self.__run_DIC_defgrad__(F, element, x1=100, x2=300, y1=100, y2=300, n_elx=4, n_ely=4)
@@ -234,14 +234,14 @@ class TestFullDICCore(TestCase):
 
     def test_deg3_biaxial(self):
         element = dic.elements.BSplineSurface(deg_e=3, deg_n=3)
-        F = np.array([[1.001, 0.], [0., .999]], dtype=np.float64)
+        F = np.array([[1.001, 0.], [0., .999]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
 
     def test_deg3_simple_shear(self):
         element = dic.elements.BSplineSurface(deg_e=3, deg_n=3)
-        F = np.array([[1.00, .005], [0., 1.]], dtype=np.float64)
+        F = np.array([[1.00, .005], [0., 1.]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
@@ -249,7 +249,7 @@ class TestFullDICCore(TestCase):
     def test_Q4_rotation(self):
         element = dic.elements.Q4()
         theta = 0.01
-        F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+        F = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
@@ -258,8 +258,8 @@ class TestFullDICCore(TestCase):
         element = dic.elements.Q4()
 
         theta = 0.01
-        F_rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
-        F_biax = np.array([[1.001, 0.], [0., 0.999]], dtype=np.float64)
+        F_rot = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=float)
+        F_biax = np.array([[1.001, 0.], [0., 0.999]], dtype=float)
         F = np.dot(F_rot, F_biax)
         # print F
 
@@ -268,14 +268,14 @@ class TestFullDICCore(TestCase):
 
     def test_Q4_biaxial(self):
         element = dic.elements.Q4()
-        F = np.array([[1.001, 0.], [0., 0.999]], dtype=np.float64)
+        F = np.array([[1.001, 0.], [0., 0.999]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)
 
     def test_Q4_simple_shear(self):
         element = dic.elements.Q4()
-        F = np.array([[1.00, .005], [0., 1.]], dtype=np.float64)
+        F = np.array([[1.00, .005], [0., 1.]], dtype=float)
 
         passed = self.__run_DIC_defgrad__(F, element, n_elx=4, n_ely=4)
         self.assertEqual(passed, True)

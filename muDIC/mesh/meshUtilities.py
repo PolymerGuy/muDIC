@@ -104,8 +104,8 @@ def make_grid(c1x, c1y, c2x, c2y, ny, nx, elm):
     node_x = np.array(xnod) + c1x
     node_y = np.array(ynod) + c1y
 
-    con_matrix = np.zeros((nx * ny,1),dtype=np.int)
-    con_matrix[:,0] = np.arange(nx*ny,dtype=np.int)
+    con_matrix = np.zeros((nx * ny,1),dtype=int)
+    con_matrix[:,0] = np.arange(nx*ny,dtype=int)
 
     return con_matrix, node_x, node_y
 

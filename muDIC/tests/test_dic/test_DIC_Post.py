@@ -31,7 +31,7 @@ class TestDIC_Post(TestCase):
         # Calculate green deformation as F^T*F
         Green_deformation = np.einsum('nij...,noj...->nio...', F, F)
 
-        I = np.eye(2, dtype=np.float)
+        I = np.eye(2, dtype=float)
 
         # Calculate green strain tensor as 0.5(F^T * F - I)
         Green_strain = 0.5 * (Green_deformation - I[np.newaxis, :, :, np.newaxis, np.newaxis, np.newaxis])

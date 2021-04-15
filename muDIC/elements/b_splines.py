@@ -386,8 +386,8 @@ class BSplineSurface(FieldInterpolator):
         results = np.zeros(n_pts * n_nodes_x * n_nodes_y, dtype=np.float64)
 
         # Calculate node span in x and y direction
-        deg_range_u = np.array(range(0, degree_u + 1), dtype=np.int)
-        deg_range_v = np.array(range(0, degree_v + 1), dtype=np.int)
+        deg_range_u = np.array(range(0, degree_u + 1), dtype=np.int64)
+        deg_range_v = np.array(range(0, degree_v + 1), dtype=np.int64)
 
         # Generate index matrix for all points
         u_ind = (span_us[:, np.newaxis] - degree_u + deg_range_u[np.newaxis, :])[:, np.newaxis, :]
