@@ -81,10 +81,10 @@ def dots_speckle(size=(1000, 1000), n_dots=5500, dot_radius_max=40, dot_radius_m
     img = np.zeros((size_x, size_y))
 
     for i in range(n_dots):
-        pos_x = np.int(random.random() * size_x)
-        pos_y = np.int(random.random() * size_y)
+        pos_x = int(random.random() * size_x)
+        pos_y = int(random.random() * size_y)
 
-        radius = np.int(random.random() * (dot_radius_max - dot_radius_min) + dot_radius_min)
+        radius = int(random.random() * (dot_radius_max - dot_radius_min) + dot_radius_min)
 
         img = insert_circle(img, (pos_x, pos_y), radius=radius, allow_overlap=allow_overlap)
     filtered = gaussian_filter(img, blur_sigma)
@@ -123,7 +123,7 @@ def harmonic_speckle(size=(1000, 1000), n_peaks_x=20):
     size_x, size_y = size
     xs, ys = np.meshgrid(np.arange(size_x), np.arange(size_y))
 
-    freq = np.pi * 2. * np.float(n_peaks_x) / size_x
+    freq = np.pi * 2. * float(n_peaks_x) / size_x
     x_harm = np.sin(xs * freq)
     y_harm = np.sin(ys * freq)
 
@@ -180,7 +180,7 @@ def perlin_noise_speckle(shape, multiplier=64., octaves=1):
             img[x, y] = float(pnoise2(x / freq, y / freq, octaves) * (float(n) - 1.) + float(n))
 
     img = normalize_array_to_unity(img) * 2.
-    img = smooth_step(img.astype(np.float), c=0.7)
+    img = smooth_step(img.astype(float), c=0.7)
     img = normalize_array_to_unity(img)
 
     return img

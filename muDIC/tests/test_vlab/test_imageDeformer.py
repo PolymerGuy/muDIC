@@ -12,12 +12,12 @@ class TestImageDeformer(TestCase):
         Deforms a image with a square by a given amount and checks the area of the square
         """
         tol = 1e-4
-        square = np.zeros((200, 200), dtype=np.float)
+        square = np.zeros((200, 200), dtype=float)
         square[75:125, 75:125] = 1.
 
         undeformed_hole_area = np.sum(square)
 
-        F = np.array([[2., .0], [0., 2.0]], dtype=np.float64)
+        F = np.array([[2., .0], [0., 2.0]], dtype=float)
 
         image_deformer = vlab.imageDeformer_from_defGrad(F)
 
@@ -36,11 +36,11 @@ class TestImageDeformer(TestCase):
         * Rotate 90 deg and subtract, should give a zero difference
         """
         tol = 1e-4
-        square = np.zeros((200, 200), dtype=np.float)
+        square = np.zeros((200, 200), dtype=float)
         square[75:125, 75:125] = 1.
 
         theta = np.pi / 4.
-        F_rot_45 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+        F_rot_45 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=float)
         image_deformer_45 = vlab.imageDeformer_from_defGrad(F_rot_45)
         image_rotated_45 = image_deformer_45(square, steps=2)[1]
 
@@ -48,7 +48,7 @@ class TestImageDeformer(TestCase):
             self.fail("The rotated image is the same as the un-rotated one")
 
         theta = np.pi / 2.
-        F_rot_90 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=np.float64)
+        F_rot_90 = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]], dtype=float)
         image_deformer_90 = vlab.imageDeformer_from_defGrad(F_rot_90)
         image_rotated_90 = image_deformer_90(square, steps=2)[1]
 

@@ -108,7 +108,7 @@ class ImageDeformer(object):
 
         >>> import numpy as np
         >>> from muDIC import vlab
-        >>> F = np.array([[1.1,.0], [0., 1.0]], dtype=np.float64)
+        >>> F = np.array([[1.1,.0], [0., 1.0]], dtype=float)
         >>> coordinate_mapper = vlab.image_deformer.CoordinateMapper(partial(map_coords_by_defgrad, F=F))
         >>> vlab.image_deformer.ImageDeformer(coordinate_mapper,multiplicative=True)
 
@@ -164,8 +164,8 @@ def map_coords_by_defgrad(xs, ys, F):
         The mapped coordinates in the same ordering as input
     """
     # Center around x and y
-    x_mid = np.float(xs.max()) / 2.
-    y_mid = np.float(ys.max()) / 2.
+    x_mid = float(xs.max()) / 2.
+    y_mid = float(ys.max()) / 2.
 
     xs_centered = xs - x_mid
     ys_centered = ys - y_mid
@@ -195,7 +195,7 @@ def imageDeformer_from_defGrad(F):
     First, we define the deformation gradient and then make an ImageDeformer object:
         >>> import numpy as np
         >>> from muDIC import vlab
-        >>> F = np.array([[1.1,.0], [0., 1.0]], dtype=np.float64)
+        >>> F = np.array([[1.1,.0], [0., 1.0]], dtype=float)
         >>> image_deformer = vlab.imageDeformer_from_defGrad(F)
 
     """

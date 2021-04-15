@@ -24,7 +24,7 @@ def harmonic_x(xs, _, amp=1.1, omega=0.05 * np.pi, frame=1):
     """
 
     # Center around x and y
-    xs = xs.astype(np.float)
+    xs = xs.astype(float)
 
     xs_mapped = amp * np.sin(omega * xs) * float(frame)
     return xs_mapped, np.zeros_like(xs_mapped)
@@ -53,7 +53,7 @@ def linear_x(xs, _, slope=0.001, frame=1):
     """
 
     # Center around x and y
-    xs = xs.astype(np.float)
+    xs = xs.astype(float)
     center = (xs.max() - xs.min()) / 2.
 
     xs_mapped = float(frame) * slope * xs - float(frame) * slope * center

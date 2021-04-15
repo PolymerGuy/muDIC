@@ -83,7 +83,7 @@ def chess_board(n):
     tile[:4, 4:] = framed_image * -1
     tile[4:, 4:] = framed_image
 
-    tile_assembly = np.tile(tile, (n, n)).astype(np.float)
+    tile_assembly = np.tile(tile, (n, n)).astype(float)
 
     return tile_assembly
 
@@ -148,13 +148,13 @@ class Downsampler(object):
 
     def __generate_coordinates__(self):
 
-        n_subpoints = np.floor(self.factor * np.sqrt(self.fill)).astype(np.int)
+        n_subpoints = np.floor(self.factor * np.sqrt(self.fill)).astype(int)
 
-        num_segments_n = np.float(self.dim_n) / self.factor
-        num_segments_m = np.float(self.dim_m) / self.factor
+        num_segments_n = float(self.dim_n) / self.factor
+        num_segments_m = float(self.dim_m) / self.factor
 
-        tile_i = np.arange(num_segments_n, dtype=np.float)
-        tile_j = np.arange(num_segments_m, dtype=np.float)
+        tile_i = np.arange(num_segments_n, dtype=float)
+        tile_j = np.arange(num_segments_m, dtype=float)
 
         i, j = np.meshgrid(tile_i, tile_j)
 
@@ -165,18 +165,18 @@ class Downsampler(object):
         i += i_shift
         j += j_shift
 
-        ind_i, ind_j = np.meshgrid(np.arange(n_subpoints, dtype=np.float), np.arange(n_subpoints, dtype=np.float))
+        ind_i, ind_j = np.meshgrid(np.arange(n_subpoints, dtype=float), np.arange(n_subpoints, dtype=float))
 
         subframe_i = (coord_subpos(i, self.fill, n_subpoints, ind_i,
-                                   self.pixel_offset_stddev) + .5) * np.float(
+                                   self.pixel_offset_stddev) + .5) * float(
             self.factor) - .5
 
         subframe_j = (coord_subpos(j, self.fill, n_subpoints, ind_j,
-                                   self.pixel_offset_stddev) + .5) * np.float(
+                                   self.pixel_offset_stddev) + .5) * float(
             self.factor) - 0.5
 
         coordinates = np.zeros(
-            (2, np.int(num_segments_n), np.int(num_segments_m), n_subpoints, n_subpoints))
+            (2, int(num_segments_n), int(num_segments_m), n_subpoints, n_subpoints))
 
         coordinates[1, :, :, :, :] = subframe_i
         coordinates[0, :, :, :, :] = subframe_j
