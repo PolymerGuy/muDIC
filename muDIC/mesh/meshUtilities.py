@@ -143,7 +143,6 @@ def make_grid_Q4(c1x, c1y, c2x, c2y, nx, ny, elm):
 
     return np.array(con_matrix).transpose(), xnode, ynode
 
-
 def make_grid(c1x, c1y, c2x, c2y, ny, nx, elm):
     """
     Makes regular grid for the given corner coordinates, number of elements along each axis and finite element
