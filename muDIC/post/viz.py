@@ -1,6 +1,7 @@
 import logging, os
 
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import numpy as np
 from scipy.ndimage import map_coordinates
 from muDIC.elements.b_splines import BSplineSurface
@@ -139,6 +140,9 @@ class Fields(object):
                 return np.meshgrid(np.linspace(0., 1., seed),
                                    np.linspace(0., 1., seed))
 
+    def __len__(self):
+        return self.__F__.shape[-1]
+
     @staticmethod
     def _deformation_gradient_(xnodesT, ynodesT, msh, elm, e, n):
         """
@@ -255,8 +259,8 @@ class Fields(object):
         # print(np.shape(eigvals))
         # print(np.shape(eigvecs))
 
-        ld1 = np.sqrt(eigvals[:, :, :, :, 0])
-        ld2 = np.sqrt(eigvals[:, :, :, :, 1])
+        ld1 = eigvals[:, :, :, :, 0] # Why sqrt?
+        ld2 = eigvals[:, :, :, :, 1]
 
         ev1 = eigvecs[:, :, :, :, 0, 0]
         ev2 = eigvecs[:, :, :, :, 0, 1]
@@ -268,8 +272,8 @@ class Fields(object):
 
         ld = np.moveaxis(np.array([ld1, ld2]), 0, 1)
         ev = np.moveaxis(np.array([ev1, ev2]), 0, 1)
-        print(np.shape(ld1))
-        print(np.shape(ev1))
+        # print(np.shape(ld1))
+        # print(np.shape(ev1))
 
         return ld, ev
 
@@ -308,6 +312,12 @@ class Fields(object):
     def eng_strain(self):
         E = self._green_strain_(self.__F__)
         return self._engineering_strain_(E)
+    
+    def princ_strain(self):
+        E = self._green_strain_(self.__F__)
+        engineering_strains = self._engineering_strain_(E)
+        ld, _ = self._principal_strain_(engineering_strains)
+        return ld
 
     def F(self):
         return self.__F__
@@ -338,8 +348,7 @@ class Fields(object):
         ref_id = ind_closest_below(frame_id, [ref.image_id for ref in self.__res__.reference])
         ref = self.__res__.reference[ref_id]
         return ref.e, ref.n
-
-
+    
 def plt_unstructured_results(xnodes, ynodes, con_mat, values, **kwargs):
     # From here: https://stackoverflow.com/questions/52202014/how-can-i-plot-2d-fem-results-using-matplotlib
     import matplotlib.pyplot as plt
@@ -411,11 +420,14 @@ class Visualizer(object):
             fvar = self.fields.residual(frame)
             xs, ys = self.fields.elm_coords(frame)
 
+        elif keyword == "princstrain" or keyword == "principalstrain":
+            fvar = self.fields.princ_strain()[:, component, :, :, frame]
+            xs, ys = self.fields.coords()[:, 0, :, :, frame], self.fields.coords()[:, 1, :, :, frame]
         else:
             raise ValueError("No valid field name was specified")
         return xs, ys, fvar
 
-    def show(self, field="displacement", component=(0, 0), frame=0, quiverdisp=False, save_path=None, **kwargs):
+    def show(self, field="displacement", component=(0, 0), frame=0, quiverdisp=False, title = None, figsize = None, save_path=None, outdpi = 100, **kwargs):
         """
         Show the field variable
 
@@ -438,9 +450,16 @@ class Visualizer(object):
             If a path is specified, the plot will be saved to that path, it will not be shown.
             If None is specified, the plot will be shown only.
         """
-
+        print('called function show: ',save_path)
         xs, ys, fvar = self.__field_vals__(field, component, frame)
 
+        if figsize is None:
+            figsize = mpl.rcParams['figure.figsize']
+        
+        if not np.isfinite(figsize).all() or (np.array(figsize) < 0).any():
+            raise ValueError('figure size must be positive finite not '
+                             f'{figsize}')
+        
         if self.images:
             n, m = self.images[frame].shape
             plt.imshow(self.images[frame], cmap=plt.cm.gray, origin="lower", extent=(0, m, 0, n))
@@ -460,16 +479,18 @@ class Visualizer(object):
                 self.logger.info("Showing element by element results on irregular grid")
                 plt_unstructured_results(self.fields.__res__.xnodesT[:, frame], self.fields.__res__.ynodesT[:, frame],
                                          self.fields.__settings__.mesh.ele, fvar[:, 0, 0].flatten())
-
+        plt.gcf().set_size_inches(figsize[0],figsize[1])
+        if title is not None:
+            plt.title(title)
         if save_path is None:
             plt.show()
         else:
             self.logger.info("Saving plot to %s"%save_path)
             if not os.path.exists(os.path.dirname(save_path)):
                 os.makedirs(os.path.dirname(save_path))
-                plt.savefig(save_path)
+                plt.savefig(save_path, dpi = outdpi)
             else:
-                plt.savefig(save_path)
+                plt.savefig(save_path, dpi = outdpi)
 
 
 def ind_closest_below(value, list):
