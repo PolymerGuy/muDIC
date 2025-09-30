@@ -170,6 +170,8 @@ def rigid_rotation(xs, ys, theta=np.pi/50, Cx=0, Cy=0, frame=1):
 
     """
 
-    xs_mapped = np.cos(theta * float(frame))*(xs-Cx) + np.sin(theta * float(frame))*(ys-Cy)
-    ys_mapped = -np.sin(theta * float(frame))*(xs-Cx) + np.cos(theta * float(frame))*(ys-Cy)
+    xs_mapped = np.cos(theta * float(frame))*(xs-Cx) + \
+        np.sin(theta * float(frame))*(ys-Cy) - xs
+    ys_mapped = -np.sin(theta * float(frame))*(xs-Cx) + \
+        np.cos(theta * float(frame))*(ys-Cy) - ys
     return xs_mapped, ys_mapped
