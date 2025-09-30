@@ -146,3 +146,30 @@ def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, frame=1):
     xs_mapped = amp * np.sin(omega * xs) * np.sin(omega * ys) * float(frame)
     ys_mapped = amp * np.sin(omega * xs) * np.sin(omega * ys) * float(frame)
     return xs_mapped, ys_mapped
+
+
+def rigid_rotation(xs, ys, theta=np.pi/50, Cx=0, Cy=0, frame=1):
+    """
+    Displacement field from rigid rotation about the out of plane axis.
+
+    Parameters
+    ----------
+    xs : array
+        The x-coodinates
+    ys : array
+        The y-coordinates
+    theta : (default np.pi/50) Rotation angle
+    Cx : (default 0) Center of twist x coordinate
+    Cy : (default 0) Center of twist Y coordinate
+
+
+    Returns
+    -------
+    u_x,u_y : array
+        The displacement field values in each direction
+
+    """
+
+    xs_mapped = np.cos(theta * float(frame))*(xs-Cx) + np.sin(theta * float(frame))*(ys-Cy)
+    ys_mapped = -np.sin(theta * float(frame))*(xs-Cx) + np.cos(theta * float(frame))*(ys-Cy)
+    return xs_mapped, ys_mapped
