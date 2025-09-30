@@ -231,7 +231,7 @@ class Mesher(object):
         reset_button = Button(but_ax2, 'Reset')
 
         rectangle = RectangleSelector(overview, line_select_callback,
-                                      drawtype='box', useblit=True,
+                                      useblit=True,
                                       button=[1, 3],  # don't use middle button
                                       minspanx=5, minspany=5,
                                       spancoords='pixels')
