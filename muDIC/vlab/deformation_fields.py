@@ -171,7 +171,11 @@ def rigid_rotation(xs, ys, theta=np.pi/50, Cx=0, Cy=0, frame=1):
     """
 
     xs_mapped = np.cos(theta * float(frame))*(xs-Cx) + \
-        np.sin(theta * float(frame))*(ys-Cy) - xs
+        np.sin(theta * float(frame))*(ys-Cy) - (xs-Cx)
     ys_mapped = -np.sin(theta * float(frame))*(xs-Cx) + \
-        np.cos(theta * float(frame))*(ys-Cy) - ys
+        np.cos(theta * float(frame))*(ys-Cy) - (ys-Cy)
+
+    # Warning inversion starts zooming out for large rotations.
+    # xs_mapped = -(ys-Cy)*(theta*float(frame))
+    # ys_mapped = (xs-Cx)*(theta*float(frame))
     return xs_mapped, ys_mapped
