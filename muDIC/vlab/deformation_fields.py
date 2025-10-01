@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def harmonic_x(xs, _, amp=1.1, omega=0.05 * np.pi, frame=1):
+def harmonic_x(xs, _, amp=1.1, omega=0.05 * np.pi, Cx=0, Cy=0, frame=1):
     """
     Displacement field being sinusoidal along the x-axis
 
@@ -14,6 +14,10 @@ def harmonic_x(xs, _, amp=1.1, omega=0.05 * np.pi, frame=1):
         The y-coordinates
     omega : float
         The angular frequency in radians/pixel
+    Cx : float
+        X Location of the center for the deformation
+    Cy : float
+        Y Location of the center for the deformation
 
 
     Returns
@@ -26,11 +30,11 @@ def harmonic_x(xs, _, amp=1.1, omega=0.05 * np.pi, frame=1):
     # Center around x and y
     xs = xs.astype(float)
 
-    xs_mapped = amp * np.sin(omega * xs) * float(frame)
+    xs_mapped = amp * np.sin(omega * (xs-Cx)) * float(frame)
     return xs_mapped, np.zeros_like(xs_mapped)
 
 
-def harmonic_y(_, ys, amp=1.1, omega=0.05 * np.pi, frame=1):
+def harmonic_y(_, ys, amp=1.1, omega=0.05 * np.pi, Cx=0, Cy=0, frame=1):
     """
     Displacement field being sinusoidal along the y-axis
 
@@ -43,6 +47,10 @@ def harmonic_y(_, ys, amp=1.1, omega=0.05 * np.pi, frame=1):
         The y-coordinates
     omega : float
         The angular frequency in radians/pixel
+    Cx : float
+        X Location of the center for the deformation
+    Cy : float
+        Y Location of the center for the deformation    
 
 
     Returns
@@ -55,11 +63,11 @@ def harmonic_y(_, ys, amp=1.1, omega=0.05 * np.pi, frame=1):
     # Center around x and y
     ys = ys.astype(float)
 
-    ys_mapped = amp * np.sin(omega * ys) * float(frame)
+    ys_mapped = amp * np.sin(omega * (ys-Cy)) * float(frame)
     return np.zeros_like(ys_mapped), ys_mapped
 
 
-def linear_x(xs, _, slope=0.001, frame=1):
+def linear_x(xs, _, slope=0.001, Cx=np.nan, Cy=np.nan, frame=1):
     """
     Displacement field being linearly increasig along x with zero in the center
 
@@ -72,7 +80,11 @@ def linear_x(xs, _, slope=0.001, frame=1):
         The y-coordinates
     slope : float
         Displacement increment per pixel along X
-
+    Cx : float
+        X Location of the center for the deformation
+    Cy : float
+        Y Location of the center for the deformation
+    
 
     Returns
     -------
@@ -83,13 +95,16 @@ def linear_x(xs, _, slope=0.001, frame=1):
 
     # Center around x and y
     xs = xs.astype(float)
-    center = (xs.max() - xs.min()) / 2.
+    if np.isnan(Cx):
+        center = (xs.max() - xs.min()) / 2.
+    else:
+        center = Cx
 
     xs_mapped = float(frame) * slope * xs - float(frame) * slope * center
     return xs_mapped, np.zeros_like(xs_mapped)
 
 
-def linear_y(_, ys, slope=0.001, frame=1):
+def linear_y(_, ys, slope=0.001, Cx=np.nan, Cy=np.nan, frame=1):
     """
     Displacement field being linearly increasig along y with zero in the center
 
@@ -102,7 +117,11 @@ def linear_y(_, ys, slope=0.001, frame=1):
         The y-coordinates
     slope : float
         Displacement increment per pixel along X
-
+    Cx : float
+        X Location of the center for the deformation
+    Cy : float
+        Y Location of the center for the deformation
+    
 
     Returns
     -------
@@ -113,13 +132,16 @@ def linear_y(_, ys, slope=0.001, frame=1):
 
     # Center around x and y
     ys = ys.astype(float)
-    center = (ys.max() - ys.min()) / 2.
+    if np.isnan(Cy):
+        center = (ys.max() - ys.min()) / 2.
+    else:
+        center = Cy
 
     xs_mapped = float(frame) * slope * ys - float(frame) * slope * center
     return xs_mapped, np.zeros_like(xs_mapped)
 
 
-def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, frame=1):
+def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, Cx=0, Cy=0, frame=1):
     """
     Displacement field being sinusoidal along the both axes
 
@@ -134,7 +156,11 @@ def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, frame=1):
         The angular frequency
     img_shape : tuple
         The shape of the field
-
+    Cx : float
+        X Location of the center for the deformation
+    Cy : float
+        Y Location of the center for the deformation
+    
 
     Returns
     -------
@@ -143,8 +169,10 @@ def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, frame=1):
 
     """
 
-    xs_mapped = amp * np.sin(omega * xs) * np.sin(omega * ys) * float(frame)
-    ys_mapped = amp * np.sin(omega * xs) * np.sin(omega * ys) * float(frame)
+    xs_mapped = amp * np.sin(omega * (xs-Cx)) * np.sin(omega * (ys-Cy)) * \
+        float(frame)
+    ys_mapped = amp * np.sin(omega * (xs-Cx)) * np.sin(omega * (ys-Cy)) * \
+        float(frame)
     return xs_mapped, ys_mapped
 
 
@@ -158,9 +186,12 @@ def rigid_rotation(xs, ys, theta=np.pi/50, Cx=0, Cy=0, frame=1):
         The x-coodinates
     ys : array
         The y-coordinates
-    theta : (default np.pi/50) Rotation angle
-    Cx : (default 0) Center of twist x coordinate
-    Cy : (default 0) Center of twist Y coordinate
+    theta : float
+        (default np.pi/50) Rotation angle
+    Cx : float
+        X Location of the center for the deformation
+    Cy : float
+        Y Location of the center for the deformation
 
 
     Returns
@@ -175,7 +206,7 @@ def rigid_rotation(xs, ys, theta=np.pi/50, Cx=0, Cy=0, frame=1):
     ys_mapped = -np.sin(theta * float(frame))*(xs-Cx) + \
         np.cos(theta * float(frame))*(ys-Cy) - (ys-Cy)
 
-    # Warning inversion starts zooming out for large rotations.
+    # Warning: inversion starts zooming out for large rotations.
     # xs_mapped = -(ys-Cy)*(theta*float(frame))
     # ys_mapped = (xs-Cx)*(theta*float(frame))
     return xs_mapped, ys_mapped
