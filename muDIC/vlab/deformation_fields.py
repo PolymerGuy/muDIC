@@ -100,7 +100,7 @@ def linear_x(xs, _, slope=0.001, Cx=np.nan, Cy=np.nan, frame=1):
     else:
         center = Cx
 
-    xs_mapped = float(frame) * slope * xs - float(frame) * slope * center
+    xs_mapped = float(frame) * slope * (xs - center)
     return xs_mapped, np.zeros_like(xs_mapped)
 
 
@@ -120,8 +120,7 @@ def linear_y(_, ys, slope=0.001, Cx=np.nan, Cy=np.nan, frame=1):
     Cx : float
         X Location of the center for the deformation
     Cy : float
-        Y Location of the center for the deformation
-    
+        Y Location of the center for the deformation    
 
     Returns
     -------
@@ -137,8 +136,8 @@ def linear_y(_, ys, slope=0.001, Cx=np.nan, Cy=np.nan, frame=1):
     else:
         center = Cy
 
-    xs_mapped = float(frame) * slope * ys - float(frame) * slope * center
-    return xs_mapped, np.zeros_like(xs_mapped)
+    ys_mapped = float(frame) * slope * (ys - center)
+    return np.zeros_like(ys_mapped), ys_mapped
 
 
 def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, Cx=0, Cy=0, frame=1):
