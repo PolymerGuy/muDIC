@@ -26,15 +26,17 @@ def num_diff(xs, ys, func, component=(1, 1)):
         raise ValueError("Incompatible component request")
 
 
-def inverse(xs, ys, function, tol=1e-6,frame=1):
+def inverse(xs, ys, function, tol=1e-6, frame=1):
     """Calculates the inverse of a displacement function
 
     Returns the arguments corresponding to the function values given.
     This is done by a Newton solver which minimizes:
 
     g(X) = X + f(X,Y) - x = 0
-    where x is the coordinate of the displacement material point, having the coordinate X in its undeformed state.
-    The coordinate Y is kept constant thoughout the optimization, and the routine is therefore not guarantied to
+    where x is the coordinate of the displacement material point, having the
+    coordinate X in its undeformed state.
+    The coordinate Y is kept constant thoughout the optimization, and the
+    routine is therefore not guarantied to
     converge.
 
     Parameters
@@ -56,11 +58,11 @@ def inverse(xs, ys, function, tol=1e-6,frame=1):
     logger = logging.getLogger()
 
     def f_x(x, y, a_x):
-        u_x, _ = function(x, y,frame=frame)
+        u_x, _ = function(x, y, frame=frame)
         return x + u_x - a_x
 
     def f_y(y, x, a_y):
-        _, u_y = function(x, y,frame=frame)
+        _, u_y = function(x, y, frame=frame)
         return y + u_y - a_y
 
     x_deformed = xs.flatten()
@@ -69,23 +71,27 @@ def inverse(xs, ys, function, tol=1e-6,frame=1):
     y_deformed = ys.flatten()
     y_undeformed_guess = y_deformed.copy()
 
-    x = optimize.newton(f_x, x_undeformed_guess, args=(y_undeformed_guess, x_deformed))
-    y = optimize.newton(f_y, y_undeformed_guess, args=(x_undeformed_guess, y_deformed))
+    x = optimize.newton(f_x, x_undeformed_guess,
+                        args=(y_undeformed_guess, x_deformed))
+    y = optimize.newton(f_y, y_undeformed_guess,
+                        args=(x_undeformed_guess, y_deformed))
+    # A COUPLED APPROACH CAN'T BE THAT HARD TO IMPLEMENT!!
 
     error_x = np.max(np.abs(f_x(np.array(x), y_undeformed_guess, x_deformed)))
     error_y = np.max(np.abs(f_y(np.array(y), x_undeformed_guess, y_deformed)))
 
     if max(error_x, error_y) > tol:
-        raise ValueError("The displacement function was not inverted successfully")
+        raise ValueError("The displacement function was not inverted "
+                         "successfully")
 
-    logger.info("Larges error in y is: %f" % error_y)
-    logger.info("Larges error in x is: %f" % error_x)
+    logger.info("Largest error in y is: %f" % error_y)
+    logger.info("Largest error in x is: %f" % error_x)
 
     return np.reshape(x, xs.shape), np.reshape(y, ys.shape)
 
 
 class ImageDeformer(object):
-    def __init__(self, coordinate_mapper, multiplicative,order=4):
+    def __init__(self, coordinate_mapper, multiplicative, order=4):
         """Image deformer
 
         Deforms an image according to the settings given at instantiation.
@@ -94,27 +100,32 @@ class ImageDeformer(object):
         Parameters
         ----------
         coordinate_mapper : func
-            A function taking two coordinates and returns two mapped coordinates
+            A function taking two coordinates and returns two mapped
+            coordinates
         multiplicative : bool
-            Whether the coordinate mapping is multiplicative or not. Use True for deformation gradients
-            and use False for displacement fields.
+            Whether the coordinate mapping is multiplicative or not. Use True
+            for deformation gradients and use False for displacement fields.
         order : int
             The interpolation order used
 
         Example
         -------
-        Make a ImageDeformed which deforms the image according to a deformation gradient.
+        Make a ImageDeformed which deforms the image according to a
+        deformation gradient.
         NOTE: You should rather use the factory imageDeformer_from_defGrad.
 
         >>> import numpy as np
         >>> from muDIC import vlab
         >>> F = np.array([[1.1,.0], [0., 1.0]], dtype=float)
-        >>> coordinate_mapper = vlab.image_deformer.CoordinateMapper(partial(map_coords_by_defgrad, F=F))
-        >>> vlab.image_deformer.ImageDeformer(coordinate_mapper,multiplicative=True)
+        >>> coordinate_mapper = vlab.image_deformer.CoordinateMapper(
+                                    partial(map_coords_by_defgrad, F=F))
+        >>> vlab.image_deformer.ImageDeformer(coordinate_mapper,
+                                              multiplicative=True)
 
         NOTE
         ----
-        The image deformed returns a list of deformed images when called, the first being undeformed
+        The image deformed returns a list of deformed images when called,
+        the first being undeformed
 
         """
         self.multiplicative = multiplicative
@@ -125,7 +136,6 @@ class ImageDeformer(object):
         n, m = np.shape(img)
         def_imgs = []
 
-
         xn, yn = np.meshgrid(np.arange(m), np.arange(n))
         xn_mapped, yn_mapped = xn, yn
 
@@ -134,11 +144,14 @@ class ImageDeformer(object):
                 Ic = img
             else:
                 if self.multiplicative:
-                    xn_mapped, yn_mapped = self.coodinate_mapper(xn_mapped, yn_mapped)
+                    xn_mapped, yn_mapped = self.coodinate_mapper(xn_mapped,
+                                                                 yn_mapped)
                 else:
-                    xn_mapped, yn_mapped = self.coodinate_mapper(xn, yn,frame=i)
+                    xn_mapped, yn_mapped = self.coodinate_mapper(xn, yn,
+                                                                 frame=i)
 
-                Ic = nd.map_coordinates(img, np.array([yn_mapped, xn_mapped]), order=self.order, cval=0)
+                Ic = nd.map_coordinates(img, np.array([yn_mapped, xn_mapped]),
+                                        order=self.order, cval=0)
 
             def_imgs.append(Ic)
 
@@ -147,7 +160,8 @@ class ImageDeformer(object):
 
 def map_coords_by_defgrad(xs, ys, F):
     """Maps coordinates based on a deformation gradient
-    NOTE. The coordinates are first centered, implying that a rotation is about the middle of the image.
+    NOTE. The coordinates are first centered, implying that a rotation is about
+    the middle of the image.
 
     Parameters
     ----------
@@ -192,14 +206,16 @@ def imageDeformer_from_defGrad(F):
 
     Examples
     --------
-    First, we define the deformation gradient and then make an ImageDeformer object:
+    First, we define the deformation gradient and then make an
+    ImageDeformer object:
         >>> import numpy as np
         >>> from muDIC import vlab
         >>> F = np.array([[1.1,.0], [0., 1.0]], dtype=float)
         >>> image_deformer = vlab.imageDeformer_from_defGrad(F)
 
     """
-    return ImageDeformer(partial(map_coords_by_defgrad, F=F), multiplicative=True)
+    return ImageDeformer(partial(map_coords_by_defgrad, F=F),
+                         multiplicative=True)
 
 
 def imageDeformer_from_uFunc(uFunc, **kwargs):
@@ -213,13 +229,16 @@ def imageDeformer_from_uFunc(uFunc, **kwargs):
     Returns
     -------
     imageDeformer
-        An ImageDeformer object which deformes images according to the displacement function
+        An ImageDeformer object which deformes images according to the
+        displacement function
 
     Examples
     --------
-    First, we define the deformation gradient and then make an ImageDeformer object:
+    First, we define the deformation gradient and then make an
+    ImageDeformer object:
         >>> from muDIC import vlab
-        >>> image_deformer = vlab.imageDeformer_from_uFunc(vlab.deformation_fields.bilat_harmonic,omega=4*np.pi)
+        >>> image_deformer = vlab.imageDeformer_from_uFunc(
+                               vlab.deformation_fields.bilat_harmonic,omega=4*np.pi)
 
     """
     coordinate_generator = partial(uFunc, **kwargs)
