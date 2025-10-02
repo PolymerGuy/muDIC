@@ -140,7 +140,9 @@ def linear_y(_, ys, slope=0.001, Cx=np.nan, Cy=np.nan, frame=1):
     return np.zeros_like(ys_mapped), ys_mapped
 
 
-def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, Cx=0, Cy=0, frame=1):
+def harmonic_bilat(xs, ys, ampx=1.1, ampy=1.1,
+                   omegax=0.05 * np.pi, omegay=0.05 * np.pi,
+                   Cx=0, Cy=0, frame=1):
     """
     Displacement field being sinusoidal along the both axes
 
@@ -151,15 +153,20 @@ def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, Cx=0, Cy=0, frame=1):
         The x-coodinates
     ys : array
         The y-coordinates
-    omega : float
-        The angular frequency
+    ampx : fload
+        Amplitude in x
+    ampy : fload
+        Amplitude in y
+    omegax : float
+        The angular frequency in x
+    omegay : float
+        The angular frequency in y
     img_shape : tuple
         The shape of the field
     Cx : float
         X Location of the center for the deformation
     Cy : float
         Y Location of the center for the deformation
-    
 
     Returns
     -------
@@ -168,9 +175,9 @@ def harmonic_bilat(xs, ys, amp=1.1, omega=0.05 * np.pi, Cx=0, Cy=0, frame=1):
 
     """
 
-    xs_mapped = amp * np.sin(omega * (xs-Cx)) * np.sin(omega * (ys-Cy)) * \
+    xs_mapped = ampx * np.sin(omegax * (xs-Cx)) * np.sin(omegay * (ys-Cy)) * \
         float(frame)
-    ys_mapped = amp * np.sin(omega * (xs-Cx)) * np.sin(omega * (ys-Cy)) * \
+    ys_mapped = ampy * np.sin(omegax * (xs-Cx)) * np.sin(omegay * (ys-Cy)) * \
         float(frame)
     return xs_mapped, ys_mapped
 
@@ -200,9 +207,9 @@ def rigid_rotation(xs, ys, theta=np.pi/50, Cx=0, Cy=0, frame=1):
 
     """
 
-    xs_mapped = np.cos(theta * float(frame))*(xs-Cx) + \
+    xs_mapped = np.cos(theta * float(frame))*(xs-Cx) - \
         np.sin(theta * float(frame))*(ys-Cy) - (xs-Cx)
-    ys_mapped = -np.sin(theta * float(frame))*(xs-Cx) + \
+    ys_mapped = np.sin(theta * float(frame))*(xs-Cx) + \
         np.cos(theta * float(frame))*(ys-Cy) - (ys-Cy)
 
     # Warning: inversion starts zooming out for large rotations.
