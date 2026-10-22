@@ -1,6 +1,7 @@
 # This allows for running the example when the repo has been cloned
 import sys
 from os.path import abspath
+from pathlib import Path
 sys.path.extend([abspath(".")])
 
 import muDIC as dic
@@ -28,21 +29,31 @@ logging.basicConfig(format='%(name)s:%(levelname)s:%(message)s', level=logging.I
 # viz = dic.Visualizer(fields,images=images)
 # viz.show(field="displacement", component = (1,1), frame=-1)
 
-# --- AgedCell run ---
-# Load images from AgedCell folder (fresh = reference, 100cycles = deformed)
+# --- Registered mid-slice aging run ---
 import numpy as np
 import imageio.v2 as imageio
 
 # =============================================================================
-# RIGID BODY CORRECTION FLAGS - Toggle these
+# INPUT AND RIGID BODY CORRECTION
 # =============================================================================
-PRE_ALIGN_IMAGES = False        # True = align images with feature matching before DIC
-REMOVE_RIGID_BODY = True        # True = subtract best-fit rigid body (translation + rotation)
-# Note: If PRE_ALIGN_IMAGES is True, REMOVE_RIGID_BODY is applied to the aligned result
+REPO_ROOT = Path(__file__).resolve().parents[1]
+ALIGNED_IMAGE_DIR = (
+    REPO_ROOT
+    / "AgedCells"
+    / "slices_for_aging"
+    / "jpg_file_converted_by_FIJI"
+    / "aligned_results"
+)
+REFERENCE_IMAGE = ALIGNED_IMAGE_DIR / "mid_slice_before_aligned_crop.tif"
+DEFORMED_IMAGE = ALIGNED_IMAGE_DIR / "mid_slice_after_aligned_crop.tif"
+
+# The input images have already had their global rotation and translation corrected
+# by align_mid_slices.py. This removes any small residual translation and rotation
+# fitted to each DIC result.
+REMOVE_RIGID_BODY = True
 # =============================================================================
 
-path = r'../FromPaper/'
-# These images are RGBA - convert to grayscale using luminance weights
+
 def to_grayscale(img):
     """Convert RGBA/RGB image to grayscale, handle 2D passthrough."""
     if img.ndim == 2:
@@ -73,47 +84,23 @@ def remove_rigid_body(disp_x, disp_y, xs, ys):
 
     params, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
     tx, ty, theta = params
-    print(f"  Rigid body removed: tx={tx:.3f}px, ty={ty:.3f}px, θ={np.degrees(theta):.4f}°")
+    print(
+        f"  Rigid body removed: tx={tx:.3f}px, ty={ty:.3f}px, "
+        f"rotation={np.degrees(theta):.4f} deg"
+    )
 
     rb_x = tx - theta * (ys - y_c)
     rb_y = ty + theta * (xs - x_c)
     return disp_x - rb_x, disp_y - rb_y
 
 
-def align_images(img_ref, img_def):
-    """Align deformed image to reference using ORB feature matching + RANSAC."""
-    from skimage import img_as_ubyte
-    from skimage.feature import ORB, match_descriptors
-    from skimage.measure import ransac
-    from skimage.transform import EuclideanTransform, warp
+if not REFERENCE_IMAGE.exists() or not DEFORMED_IMAGE.exists():
+    raise FileNotFoundError(
+        "Aligned images are missing. Run Examples\\align_mid_slices.py first."
+    )
 
-    ref_u8 = img_as_ubyte((img_ref - img_ref.min()) / (img_ref.max() - img_ref.min()))
-    def_u8 = img_as_ubyte((img_def - img_def.min()) / (img_def.max() - img_def.min()))
-
-    detector = ORB(n_keypoints=500)
-    detector.detect_and_extract(ref_u8)
-    kp_ref, desc_ref = detector.keypoints, detector.descriptors
-
-    detector.detect_and_extract(def_u8)
-    kp_def, desc_def = detector.keypoints, detector.descriptors
-
-    matches = match_descriptors(desc_ref, desc_def, cross_check=True)
-    src = kp_ref[matches[:, 0]][:, ::-1]
-    dst = kp_def[matches[:, 1]][:, ::-1]
-
-    model, inliers = ransac(
-        (dst, src), EuclideanTransform,
-        min_samples=3, residual_threshold=2.0, max_trials=1000)
-
-    print(f"  Alignment: tx={model.translation[0]:.3f}, ty={model.translation[1]:.3f}, "
-          f"θ={np.degrees(model.rotation):.4f}° ({inliers.sum()}/{len(inliers)} inliers)")
-
-    aligned = warp(img_def, model.inverse, output_shape=img_def.shape, preserve_range=True)
-    return aligned
-
-
-img1 = to_grayscale(np.array(imageio.imread(path + '1.tif'), dtype=float))
-img2 = to_grayscale(np.array(imageio.imread(path + '2.png'), dtype=float))
+img1 = to_grayscale(np.array(imageio.imread(REFERENCE_IMAGE), dtype=float))
+img2 = to_grayscale(np.array(imageio.imread(DEFORMED_IMAGE), dtype=float))
 
 # Crop to matching size (images may differ by a pixel or two)
 min_rows = min(img1.shape[0], img2.shape[0])
@@ -121,11 +108,8 @@ min_cols = min(img1.shape[1], img2.shape[1])
 img1 = img1[:min_rows, :min_cols]
 img2 = img2[:min_rows, :min_cols]
 print(f"Image shape: {img1.shape}")
-
-# Pre-align images if flag is set
-if PRE_ALIGN_IMAGES:
-    print("Pre-aligning images with feature matching...")
-    img2 = align_images(img1, img2)
+print(f"Reference image: {REFERENCE_IMAGE}")
+print(f"Deformed image: {DEFORMED_IMAGE}")
 
 images = dic.IO.image_stack_from_list([img1, img2])
 
@@ -172,17 +156,20 @@ for cfg in mesh_configs:
     all_results.append((cfg, fields, settings))
 
 # =============================================================================
-# COMBINED VISUALIZATION - All meshes in a single figure
+# VISUALIZATION - One two-panel figure for each mesh configuration
 # =============================================================================
-n_rows = len(all_results)
-n_cols = 4  # X-disp, Y-disp, magnitude, vector field
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(22, 5 * n_rows))
-if n_rows == 1:
-    axes = axes[np.newaxis, :]
+HEATMAP_ALPHA = 0.5
+VECTOR_LENGTH_PIXELS = 100.0
+VECTOR_GRID_TARGET = 12
 
-n, m = img2.shape  # rows, cols of the deformed image
+correction_label = ["globally registered input"]
+if REMOVE_RIGID_BODY:
+    correction_label.append("residual rigid body removed")
+correction_str = " + ".join(correction_label)
 
-for i, (cfg, fields, settings) in enumerate(all_results):
+n, m = img2.shape
+
+for cfg, fields, settings in all_results:
     # Extract displacement components
     disp_x = fields.disp()[0, 0, :, :, -1]  # x-displacement
     disp_y = fields.disp()[0, 1, :, :, -1]  # y-displacement
@@ -193,119 +180,104 @@ for i, (cfg, fields, settings) in enumerate(all_results):
     if REMOVE_RIGID_BODY:
         disp_x, disp_y = remove_rigid_body(disp_x, disp_y, xs, ys)
 
-    disp_mag = np.sqrt(disp_x**2 + disp_y**2)  # magnitude
-
-    plot_data = [
-        (disp_x, "X-displacement"),
-        (disp_y, "Y-displacement"),
-        (disp_mag, "Magnitude (√(x²+y²))"),
-    ]
-
-    # Heatmap columns
-    for j, (comp_data, comp_label) in enumerate(plot_data):
-        ax = axes[i, j]
-
-        # Show the deformed image (image 2) as background
-        ax.imshow(img2, cmap='gray', origin='lower', extent=(0, m, 0, n), aspect='equal')
-
-        # Overlay transparent displacement heatmap
-        cf = ax.contourf(xs, ys, comp_data, levels=50, cmap='jet', alpha=0.5)
-        plt.colorbar(cf, ax=ax, shrink=0.8, label='Displacement [px]')
-
-        ax.set_title(f"{cfg['label']} - {comp_label}", fontsize=10, fontweight='bold')
-        ax.set_xlim(0, m)
-        ax.set_ylim(0, n)
-
-        # Parameter text box
-        param_text = (
-            f"n_elx={cfg['n_elx']}, n_ely={cfg['n_ely']}\n"
-            f"deg_e=3, deg_n=3, type=Q4\n"
-            f"ROI: X=[{Xc1},{Xc2}], Y=[{Yc1},{Yc2}]\n"
-            f"tol={settings.tol:.0e}, maxit={settings.maxit}\n"
-            f"interp_order={settings.interpolation_order}"
-        )
-        props = dict(boxstyle='round,pad=0.4', facecolor='white', alpha=0.85, edgecolor='gray')
-        ax.text(0.02, 0.98, param_text, transform=ax.transAxes, fontsize=7,
-                verticalalignment='top', fontfamily='monospace', bbox=props)
-
-    # Vector field column
-    ax = axes[i, 3]
-    ax.imshow(img2, cmap='gray', origin='lower', extent=(0, m, 0, n), aspect='equal')
-
-    # Subsample for readable arrows
-    skip = max(1, xs.shape[0] // 12)
-    ax.quiver(xs[::skip, ::skip], ys[::skip, ::skip],
-              disp_x[::skip, ::skip], disp_y[::skip, ::skip],
-              disp_mag[::skip, ::skip], cmap='jet', alpha=0.8,
-              angles='xy', scale_units='xy', scale=0.5)
-
-    ax.set_title(f"{cfg['label']} - Vector Field", fontsize=10, fontweight='bold')
-    ax.set_xlim(0, m)
-    ax.set_ylim(0, n)
-
-    # Parameter text box for vector field
-    ax.text(0.02, 0.98, param_text, transform=ax.transAxes, fontsize=7,
-            verticalalignment='top', fontfamily='monospace', bbox=props)
-
-correction_label = []
-if PRE_ALIGN_IMAGES:
-    correction_label.append("pre-aligned")
-if REMOVE_RIGID_BODY:
-    correction_label.append("rigid body removed")
-correction_str = " + ".join(correction_label) if correction_label else "no correction"
-
-fig.suptitle(f"DIC Displacement Field - Mesh Size Comparison\n"
-             f"(overlay on deformed image | {correction_str})",
-             fontsize=14, fontweight='bold', y=1.01)
-plt.tight_layout()
-
-# =============================================================================
-# FIGURE 2 - Fine mesh (8x8) only: magnitude + vector field
-# =============================================================================
-# Find the 8x8 result
-fine_result = None
-for cfg, fields, settings in all_results:
-    if cfg['n_ely'] == 8 and cfg['n_elx'] == 8:
-        fine_result = (cfg, fields, settings)
-        break
-
-if fine_result is not None:
-    cfg, fields, settings = fine_result
-    disp_x = fields.disp()[0, 0, :, :, -1]
-    disp_y = fields.disp()[0, 1, :, :, -1]
-    xs = fields.coords()[0, 0, :, :, -1]
-    ys = fields.coords()[0, 1, :, :, -1]
-
-    if REMOVE_RIGID_BODY:
-        disp_x, disp_y = remove_rigid_body(disp_x, disp_y, xs, ys)
-
     disp_mag = np.sqrt(disp_x**2 + disp_y**2)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 8))
 
-    fig2, axes2 = plt.subplots(1, 2, figsize=(14, 6))
-
-    # Magnitude heatmap
-    ax = axes2[0]
-    ax.imshow(img2, cmap='gray', origin='lower', extent=(0, m, 0, n), aspect='equal')
-    cf = ax.contourf(xs, ys, disp_mag, levels=50, cmap='jet', alpha=0.5)
-    plt.colorbar(cf, ax=ax, shrink=0.8, label='|displacement| [px]')
-    ax.set_title("Total Displacement Magnitude (8×8 mesh)", fontsize=12, fontweight='bold')
+    # Total displacement magnitude
+    ax = axes[0]
+    ax.imshow(img2, cmap='gray', origin='upper', extent=(0, m, n, 0), aspect='equal')
+    cf = ax.contourf(
+        xs,
+        ys,
+        disp_mag,
+        levels=50,
+        cmap='jet',
+        alpha=HEATMAP_ALPHA,
+    )
+    plt.colorbar(cf, ax=ax, shrink=0.8, label='Displacement magnitude [px]')
+    ax.set_title("Total Displacement Magnitude", fontsize=12, fontweight='bold')
     ax.set_xlim(0, m)
-    ax.set_ylim(0, n)
+    ax.set_ylim(n, 0)
 
-    # Vector field
-    ax = axes2[1]
-    ax.imshow(img2, cmap='gray', origin='lower', extent=(0, m, 0, n), aspect='equal')
-    skip = max(1, xs.shape[0] // 15)
-    ax.quiver(xs[::skip, ::skip], ys[::skip, ::skip],
-              disp_x[::skip, ::skip], disp_y[::skip, ::skip],
-              disp_mag[::skip, ::skip], cmap='jet', alpha=0.8,
-              angles='xy', scale_units='xy', scale=0.5)
-    ax.set_title("Vector Field (8×8 mesh)", fontsize=12, fontweight='bold')
+    # Vector field panel
+    ax = axes[1]
+    ax.imshow(img2, cmap='gray', origin='upper', extent=(0, m, n, 0), aspect='equal')
+
+    # Normalize every nonzero vector to a fixed display length. Arrow direction
+    # remains physical, while color represents the actual displacement magnitude.
+    valid_vectors = np.isfinite(disp_mag) & (disp_mag > np.finfo(float).eps)
+    normalized_x = np.zeros_like(disp_x)
+    normalized_y = np.zeros_like(disp_y)
+    normalized_x[valid_vectors] = disp_x[valid_vectors] / disp_mag[valid_vectors]
+    normalized_y[valid_vectors] = disp_y[valid_vectors] / disp_mag[valid_vectors]
+    display_x = normalized_x * VECTOR_LENGTH_PIXELS
+    display_y = normalized_y * VECTOR_LENGTH_PIXELS
+
+    skip = max(1, min(xs.shape) // VECTOR_GRID_TARGET)
+    quiver = ax.quiver(
+        xs[::skip, ::skip],
+        ys[::skip, ::skip],
+        display_x[::skip, ::skip],
+        display_y[::skip, ::skip],
+        disp_mag[::skip, ::skip],
+        cmap='jet',
+        alpha=1.0,
+        edgecolor='black',
+        linewidth=0.5,
+        angles='xy',
+        scale_units='xy',
+        scale=1.0,
+        width=0.006,
+        headwidth=5.5,
+        headlength=6.5,
+        pivot='middle',
+    )
+    plt.colorbar(quiver, ax=ax, shrink=0.8, label='Displacement [px]')
+    ax.quiverkey(
+        quiver,
+        X=0.74,
+        Y=1.04,
+        U=VECTOR_LENGTH_PIXELS,
+        label=f'Normalized {VECTOR_LENGTH_PIXELS:.0f} px display length',
+        labelpos='E',
+    )
+
+    ax.set_title(
+        "Normalized Vector Directions\n(color = actual magnitude)",
+        fontsize=12,
+        fontweight='bold',
+    )
     ax.set_xlim(0, m)
-    ax.set_ylim(0, n)
+    ax.set_ylim(n, 0)
 
-    fig2.suptitle(f"Fine Mesh (8×8) DIC Results | {correction_str}",
-                  fontsize=13, fontweight='bold')
-    plt.tight_layout()
+    param_text = (
+        f"mesh={cfg['n_elx']}x{cfg['n_ely']} | deg_e=3, deg_n=3, Q4 | "
+        f"ROI: X=[{Xc1},{Xc2}], Y=[{Yc1},{Yc2}]\n"
+        f"tol={settings.tol:.0e}, maxit={settings.maxit}, "
+        f"interp_order={settings.interpolation_order} | "
+        f"normalized vector display length={VECTOR_LENGTH_PIXELS:.0f}px"
+    )
+    fig.suptitle(
+        f"{cfg['label']} DIC Results ({cfg['n_elx']}x{cfg['n_ely']} mesh)\n"
+        f"{correction_str}",
+        fontsize=15,
+        fontweight='bold',
+    )
+    fig.text(
+        0.5,
+        0.015,
+        param_text,
+        ha='center',
+        va='bottom',
+        fontsize=9,
+        fontfamily='monospace',
+        bbox=dict(
+            boxstyle='round,pad=0.5',
+            facecolor='white',
+            alpha=0.9,
+            edgecolor='gray',
+        ),
+    )
+    plt.tight_layout(rect=(0, 0.07, 1, 0.94))
 
 plt.show()
